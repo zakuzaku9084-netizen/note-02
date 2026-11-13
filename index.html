@@ -1,292 +1,989 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DEATH NOTE - Shared</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DEATH NOTE - Blacklist Database</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Noto Serif JP & Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Inter:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@600;900&display=swap" rel="stylesheet">
+  
+  <!-- PWA (スマホアプリ化) 対応タグ -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DeathNote">
+  <meta name="theme-color" content="#09090b">
+  
+  <script>
+    // PWA用のマニフェストを動的に生成して追加
+    const manifest = {
+      name: "DEATH NOTE - Blacklist DB",
+      short_name: "DeathNote",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#09090b",
+      theme_color: "#09090b",
+      icons: [{
+        src: "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dc2626'%3E%3Cpath d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'/%3E%3C/svg%3E",
+        sizes: "192x192",
+        type: "image/svg+xml"
+      }]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestUrl = URL.createObjectURL(manifestBlob);
+    document.write(`<link rel="manifest" href="${manifestUrl}">`);
+  </script>
+
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel compiler CDN for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            death: {
+              bg: '#09090b',
+              panel: '#121215',
+              card: '#18181c',
+              border: '#27272a',
+              accent: '#dc2626',
+              glow: '#991b1b',
+              gold: '#d97706',
+              text: '#f4f4f5',
+              muted: '#a1a1aa'
+            }
+          },
+          fontFamily: {
+            cinzel: ['Cinzel', 'serif'],
+            serifJP: ['Noto Serif JP', 'serif'],
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Custom Scrollbar & Mobile Optimizations */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #09090b; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+
+    /* iOS smooth scroll & tap highlight reset */
+    html, body {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
     
-    <!-- PWA用設定 -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="DEATH NOTE">
-    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/8b0000/ffffff?text=D">
-    
-    <style>
-        :root {
-            --bg-color: #0d0d0d;
-            --card-bg: #1a1a1a;
-            --text-main: #e0e0e0;
-            --text-muted: #888888;
-            --accent-red: #8b0000;
-            --accent-red-hover: #a50000;
-            --border-color: #333333;
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: 'Times New Roman', serif;
-            margin: 0;
-            padding: 0;
-            padding-bottom: 80px;
-        }
-        header {
-            background-color: #000;
-            border-bottom: 2px solid var(--accent-red);
-            padding: 15px;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        header h1 {
-            margin: 0;
-            font-size: 1.5rem;
-            letter-spacing: 2px;
-            color: #fff;
-            text-shadow: 0 0 5px var(--accent-red);
-        }
-        .container {
-            padding: 15px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        /* 検索バー */
-        .search-box { margin-bottom: 20px; }
-        .search-box input {
-            width: 100%; padding: 12px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-main); border-radius: 4px;
-            font-size: 16px; box-sizing: border-box;
-        }
-        /* ターゲットカード */
-        .target-list { display: flex; flex-direction: column; gap: 15px; }
-        .target-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-left: 4px solid var(--accent-red);
-            padding: 15px; border-radius: 4px;
-        }
-        .target-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;
-        }
-        .psnid { font-size: 1.2rem; font-weight: bold; color: #fff; }
-        .date { font-size: 0.8rem; color: var(--text-muted); }
-        .target-details p { margin: 5px 0; font-size: 0.95rem; }
-        .label { color: var(--text-muted); font-size: 0.85rem; }
-        /* ボトムアクションバー */
-        .bottom-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background-color: #000; border-top: 1px solid var(--border-color);
-            display: flex; justify-content: space-around; padding: 10px 0; z-index: 100;
-        }
-        .bottom-bar button {
-            background: none; border: none; color: var(--text-main);
-            font-size: 1rem; padding: 10px; cursor: pointer; flex: 1;
-        }
-        .bottom-bar button:hover { color: var(--accent-red); }
-        .btn-primary { background-color: var(--accent-red) !important; color: #fff !important; border-radius: 4px; margin: 0 10px; }
-        /* モーダル */
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); z-index: 200; align-items: flex-end;
-        }
-        .modal-content {
-            background-color: var(--bg-color); width: 100%;
-            border-top: 2px solid var(--accent-red); padding: 20px;
-            box-sizing: border-box; border-radius: 12px 12px 0 0; max-height: 90vh; overflow-y: auto;
-        }
-        .modal-content h2 { margin-top: 0; color: var(--accent-red); }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: var(--text-muted); }
-        .form-group input, .form-group textarea {
-            width: 100%; padding: 10px; background-color: var(--card-bg);
-            border: 1px solid var(--border-color); color: var(--text-main);
-            border-radius: 4px; box-sizing: border-box; font-size: 16px;
-        }
-        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
-        .form-actions button { flex: 1; padding: 12px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
-        .btn-cancel { background-color: #333; color: #fff; }
-        .btn-submit { background-color: var(--accent-red); color: #fff; }
-        #loading { text-align: center; padding: 20px; color: var(--accent-red); font-style: italic; }
-    </style>
+    .card-glow:active, .card-glow:hover {
+      box-shadow: 0 0 15px rgba(220, 38, 38, 0.2);
+    }
+    .notebook-border {
+      border-left: 4px solid #dc2626;
+    }
+
+    /* Bottom sheet slide animation for mobile */
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
 </head>
-<body>
+<body class="bg-death-bg text-death-text font-sans antialiased min-h-screen selection:bg-red-900 selection:text-white pb-20 sm:pb-8">
+  <div id="root"></div>
 
-<header>
-    <h1>DEATH NOTE</h1>
-</header>
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
 
-<div class="container">
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="PSNID, 罪状, クランで検索..." oninput="filterTargets()">
-    </div>
+    // ★ ここでスプレッドシートのAPI URLを設定します ★
+    const API_URL = "https://script.google.com/macros/s/AKfycbxGxb8a_aAYBNxvLRYCSKj1hc-crI2ljyR2KDU7KaxFc-vw3qsFTkjG9vSdtJvWS1-d/exec";
 
-    <div id="loading">スプレッドシートと同期中...</div>
-    
-    <div class="target-list" id="targetList">
-        <!-- JSでカードが生成されます -->
-    </div>
-</div>
+    // SVG アイコン
+    const Icons = {
+      Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
+      Filter: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>,
+      Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>,
+      Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>,
+      Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
+      Book: () => <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>,
+      Table: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>,
+      Grid: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>,
+      Skull: () => <svg className="w-5 h-5 text-red-500 inline-block shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM8 17a1 1 0 102 0v-1H8v1zm4-1a1 1 0 102 0v-1h-2v1z" clipRule="evenodd"/></svg>,
+      Download: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
+      Reset: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>,
+      Close: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
+      Loading: () => <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    };
 
-<div class="bottom-bar">
-    <button onclick="window.scrollTo(0,0); document.getElementById('searchInput').focus()">🔍 検索</button>
-    <button class="btn-primary" onclick="openAddModal()">＋ ターゲット追加</button>
-</div>
+    function App() {
+      // 状態管理
+      const [players, setPlayers] = useState([]);
+      const [isLoading, setIsLoading] = useState(true);
+      const [searchTerm, setSearchTerm] = useState("");
+      const [selectedClan, setSelectedClan] = useState("ALL");
+      const [selectedCrimeTag, setSelectedCrimeTag] = useState("ALL");
+      const [selectedDanger, setSelectedDanger] = useState("ALL");
+      const [sortBy, setSortBy] = useState("date-desc");
+      
+      const [viewMode, setViewMode] = useState(() => window.innerWidth < 640 ? 'card' : 'table');
+      const [selectedPlayer, setSelectedPlayer] = useState(null);
+      const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+      const [copiedId, setCopiedId] = useState(null);
+      const [toastMessage, setToastMessage] = useState("");
+      const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-<div id="addModal" class="modal">
-    <div class="modal-content">
-        <h2>ターゲット登録</h2>
-        <div class="form-group">
-            <label>PSNID (必須)</label>
-            <input type="text" id="newPsnid" placeholder="例: tmp-zako">
-        </div>
-        <div class="form-group">
-            <label>所属クラン</label>
-            <input type="text" id="newClan" placeholder="例: tmp">
-        </div>
-        <div class="form-group">
-            <label>罪状</label>
-            <input type="text" id="newCrime" placeholder="例: 放置、煽り">
-        </div>
-        <div class="form-group">
-            <label>備考</label>
-            <textarea id="newNote" rows="3" placeholder="詳細な状況など"></textarea>
-        </div>
-        <div class="form-actions">
-            <button class="btn-cancel" onclick="closeAddModal()">キャンセル</button>
-            <button class="btn-submit" onclick="submitTarget()">登録する</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // ==========================================
-    // ★ ここに取得したウェブアプリのURLを貼り付けます ★
-    // ==========================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbxGxb8a_aAYBNxvLRYCSKj1hc-crI2ljyR2KDU7KaxFc-vw3qsFTkjG9vSdtJvWS1-d/exec"; 
-
-    let targetData = [];
-
-    // スプレッドシートからデータを取得
-    async function loadData() {
-        if(API_URL === "ここに取得したURLを貼り付けます") {
-            document.getElementById('loading').innerText = "エラー: API_URLが設定されていません。コードを書き換えてください。";
-            return;
-        }
-
-        try {
+      // スプレッドシートからのデータ取得
+      useEffect(() => {
+        const loadData = async () => {
+          try {
             const response = await fetch(API_URL);
             const data = await response.json();
-            // 空のデータを取り除くなどの整形
-            targetData = data.filter(row => row.PSNID && row.PSNID.trim() !== "");
             
-            document.getElementById('loading').style.display = 'none';
-            renderList(targetData);
-        } catch (error) {
-            document.getElementById('loading').innerText = "データの取得に失敗しました。";
-            console.error(error);
-        }
-    }
+            const formattedData = data
+              .filter(row => row.PSNID && String(row.PSNID).trim() !== "")
+              .map((row, idx) => {
+                // 罪状を配列に分割
+                let crimesList = [];
+                if (row.罪状) {
+                  crimesList = row.罪状.split(/[,、\s]+/).map(c => c.trim()).filter(c => c);
+                }
+                
+                // 危険度はスプレッドシートに無いためC（一般）をデフォルト、または備考から推測など
+                let dangerRank = "C";
+                if(row.備考 && row.備考.includes("終身名誉")) dangerRank = "S";
+                else if (row.備考 && row.備考.includes("FF")) dangerRank = "A";
 
-    // リストの描画
-    function renderList(data) {
-        const list = document.getElementById('targetList');
-        list.innerHTML = '';
+                return {
+                  id: String(Date.now() + idx),
+                  psnid: row.PSNID,
+                  clan: row['所属クラン(当時)'] || row.クラン || "-",
+                  crimes: crimesList.length > 0 ? crimesList : ["不明"],
+                  note: row.備考 || "-",
+                  date: row.更新日 || "",
+                  danger: dangerRank,
+                  platform: "Unknown"
+                };
+              });
+
+            setPlayers(formattedData);
+          } catch (error) {
+            console.error("Fetch error:", error);
+            showToast("データベースへの接続に失敗しました");
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        loadData();
+      }, []);
+
+      // リサイズ検知でビュー自動最適化
+      useEffect(() => {
+        const handleResize = () => {
+          if (window.innerWidth < 640 && viewMode === 'table') {
+            // モバイル時はカード推奨
+          }
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+      }, [viewMode]);
+
+      const showToast = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(""), 3000);
+      };
+
+      // クリップボード書き込み（スマホ・iFrame対応）
+      const handleCopyPSNID = (psnid, e) => {
+        if (e) e.stopPropagation();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(psnid).then(() => {
+            setCopiedId(psnid);
+            showToast(`ID: ${psnid} をコピーしました`);
+            setTimeout(() => setCopiedId(null), 2000);
+          }).catch(() => copyFallback(psnid));
+        } else {
+          copyFallback(psnid);
+        }
+      };
+
+      const copyFallback = (text) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          setCopiedId(text);
+          showToast(`ID: ${text} をコピーしました`);
+          setTimeout(() => setCopiedId(null), 2000);
+        } catch (err) {
+          showToast("コピーに失敗しました");
+        }
+        document.body.removeChild(textarea);
+      };
+
+      // 集計
+      const clansList = useMemo(() => {
+        const set = new Set();
+        players.forEach(p => { if (p.clan && p.clan !== "-") set.add(p.clan); });
+        return Array.from(set);
+      }, [players]);
+
+      const allCrimeTags = useMemo(() => {
+        const set = new Set();
+        players.forEach(p => { if (Array.isArray(p.crimes)) p.crimes.forEach(c => set.add(c)); });
+        return Array.from(set);
+      }, [players]);
+
+      // フィルタリング
+      const filteredPlayers = useMemo(() => {
+        return players.filter(player => {
+          const term = searchTerm.toLowerCase();
+          const matchesSearch = 
+            player.psnid.toLowerCase().includes(term) ||
+            (player.clan && player.clan.toLowerCase().includes(term)) ||
+            (player.crimes && player.crimes.some(c => c.toLowerCase().includes(term))) ||
+            (player.note && player.note.toLowerCase().includes(term));
+
+          const matchesClan = selectedClan === "ALL" || player.clan === selectedClan;
+          const matchesCrime = selectedCrimeTag === "ALL" || (player.crimes && player.crimes.includes(selectedCrimeTag));
+          const matchesDanger = selectedDanger === "ALL" || player.danger === selectedDanger;
+
+          return matchesSearch && matchesClan && matchesCrime && matchesDanger;
+        }).sort((a, b) => {
+          if (sortBy === "date-desc") return new Date(b.date) - new Date(a.date);
+          if (sortBy === "date-asc") return new Date(a.date) - new Date(b.date);
+          if (sortBy === "psnid-asc") return a.psnid.localeCompare(b.psnid);
+          if (sortBy === "danger-desc") {
+            const dangerRank = { "S": 4, "A": 3, "B": 2, "C": 1 };
+            return (dangerRank[b.danger] || 0) - (dangerRank[a.danger] || 0);
+          }
+          return 0;
+        });
+      }, [players, searchTerm, selectedClan, selectedCrimeTag, selectedDanger, sortBy]);
+
+      // スプレッドシートへのデータ追加
+      const handleAddPlayer = async (newPlayerData) => {
+        showToast("データベースへ送信中...");
         
-        data.forEach(target => {
-            const card = document.createElement('div');
-            card.className = 'target-card';
-            card.innerHTML = `
-                <div class="target-header">
-                    <span class="psnid">${target.PSNID || '不明'}</span>
-                    <span class="date">${target.更新日 || ''}</span>
-                </div>
-                <div class="target-details">
-                    <p><span class="label">クラン:</span> ${target['所属クラン(当時)'] || target.クラン || '-'}</p>
-                    <p><span class="label">罪状:</span> <span style="color:var(--accent-red)">${target.罪状 || '-'}</span></p>
-                    <p><span class="label">備考:</span> ${target.備考 || '-'}</p>
-                </div>
-            `;
-            list.appendChild(card);
-        });
-    }
-
-    // 検索機能
-    function filterTargets() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = targetData.filter(target => {
-            const psnid = (target.PSNID || '').toLowerCase();
-            const crime = (target.罪状 || '').toLowerCase();
-            const clan = (target['所属クラン(当時)'] || target.クラン || '').toLowerCase();
-            return psnid.includes(query) || crime.includes(query) || clan.includes(query);
-        });
-        renderList(filtered);
-    }
-
-    // モーダル操作
-    function openAddModal() {
-        document.getElementById('addModal').style.display = 'flex';
-    }
-    function closeAddModal() {
-        document.getElementById('addModal').style.display = 'none';
-        document.getElementById('newPsnid').value = '';
-        document.getElementById('newClan').value = '';
-        document.getElementById('newCrime').value = '';
-        document.getElementById('newNote').value = '';
-    }
-
-    // データ追加 (スプレッドシートへ送信)
-    async function submitTarget() {
-        const psnid = document.getElementById('newPsnid').value.trim();
-        if(!psnid) {
-            alert('PSNIDは必須です');
-            return;
-        }
-
-        const submitBtn = document.querySelector('.btn-submit');
-        submitBtn.innerText = '送信中...';
-        submitBtn.disabled = true;
-
         const today = new Date();
         const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
-
-        const newData = {
-            PSNID: psnid,
-            クラン: document.getElementById('newClan').value.trim(),
-            罪状: document.getElementById('newCrime').value.trim(),
-            備考: document.getElementById('newNote').value.trim(),
-            更新日: dateStr
+        
+        // GAS側が期待する形に変換
+        const sheetData = {
+          PSNID: newPlayerData.psnid,
+          クラン: newPlayerData.clan,
+          罪状: newPlayerData.crimes.join('、'), // 配列をカンマ区切りに
+          備考: newPlayerData.note,
+          更新日: dateStr
         };
 
         try {
-            await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(newData)
-            });
-            
-            // 成功したらローカルのリストにも追加して再描画
-            targetData.unshift({
-                ...newData,
-                '所属クラン(当時)': newData.クラン
-            });
-            filterTargets();
-            closeAddModal();
-            alert('ターゲットをスプレッドシートに登録しました！');
+          await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(sheetData)
+          });
+
+          const newEntry = {
+            ...newPlayerData,
+            id: Date.now().toString(),
+            date: dateStr
+          };
+          
+          setPlayers([newEntry, ...players]);
+          setIsAddModalOpen(false);
+          showToast(`ターゲット「${newEntry.psnid}」を保存しました`);
         } catch (error) {
-            alert('登録に失敗しました。');
-            console.error(error);
-        } finally {
-            submitBtn.innerText = '登録する';
-            submitBtn.disabled = false;
+          console.error(error);
+          showToast("保存に失敗しました。時間をおいて再試行してください。");
         }
+      };
+
+      const handleExportCSV = () => {
+        const headers = ["PSNID", "所属クラン", "罪状", "備考", "更新日", "危険度"];
+        const rows = players.map(p => [
+          `"${p.psnid}"`,
+          `"${p.clan || '-'}"`,
+          `"${(p.crimes || []).join(';')}"`,
+          `"${(p.note || '').replace(/"/g, '""')}"`,
+          `"${p.date}"`,
+          `"${p.danger || 'C'}"`
+        ]);
+
+        const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `deathnote_targets_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("CSVを出力しました");
+      };
+
+      const renderDangerBadge = (danger) => {
+        switch (danger) {
+          case 'S': return <span className="px-2.5 py-0.5 rounded text-xs font-black bg-red-950 text-red-500 border border-red-700/80 shadow-[0_0_8px_rgba(220,38,38,0.5)]">S級 凶悪</span>;
+          case 'A': return <span className="px-2 py-0.5 rounded text-xs font-bold bg-orange-950/80 text-orange-400 border border-orange-700/50">A級 高警戒</span>;
+          case 'B': return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-950/60 text-amber-300 border border-amber-600/40">B級 注意</span>;
+          case 'C': default: return <span className="px-2 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-400 border border-zinc-700">C級 一般</span>;
+        }
+      };
+
+      if (isLoading) {
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-death-bg text-white">
+            <Icons.Loading />
+            <p className="mt-4 text-zinc-400 font-serifJP tracking-widest text-sm">データベース同期中...</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          {/* Header */}
+          <header className="border-b border-death-border bg-black/90 sticky top-0 z-30 shadow-xl backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
+              <div className="flex items-center justify-between">
+                {/* Logo */}
+                <div 
+                  className="flex items-center space-x-2.5 cursor-pointer" 
+                  onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }}
+                >
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded bg-gradient-to-br from-red-900 to-black border border-red-700 flex items-center justify-center shrink-0">
+                    <Icons.Book />
+                  </div>
+                  <div>
+                    <h1 className="font-cinzel text-xl sm:text-2xl font-black tracking-wider text-white leading-none">
+                      DEATH NOTE
+                    </h1>
+                    <p className="text-[10px] sm:text-xs text-death-muted font-serifJP tracking-tight mt-0.5">
+                      ブラックリスト D.B.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Desktop Buttons */}
+                <div className="hidden sm:flex items-center space-x-2">
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-red-700 hover:bg-red-600 text-white font-medium text-xs rounded border border-red-500 transition-all shadow-md"
+                  >
+                    <Icons.Plus />
+                    <span>ターゲット追加</span>
+                  </button>
+                  <button
+                    onClick={handleExportCSV}
+                    title="CSV出力"
+                    className="p-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
+                  >
+                    <Icons.Download />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Area */}
+          <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border">
+                <span className="text-[10px] sm:text-xs text-death-muted block">全ターゲット数</span>
+                <span className="text-lg sm:text-2xl font-bold font-cinzel text-white">{players.length} <span className="text-xs font-sans text-zinc-500">件</span></span>
+              </div>
+              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border border-l-2 border-l-red-600">
+                <span className="text-[10px] sm:text-xs text-death-muted block">S級 (凶悪)</span>
+                <span className="text-lg sm:text-2xl font-bold font-cinzel text-red-500">
+                  {players.filter(p => p.danger === 'S').length} <span className="text-xs font-sans text-zinc-500">名</span>
+                </span>
+              </div>
+              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border">
+                <span className="text-[10px] sm:text-xs text-death-muted block">登録クラン数</span>
+                <span className="text-lg sm:text-2xl font-bold font-cinzel text-zinc-200">{clansList.length} <span className="text-xs font-sans text-zinc-500 font-normal">組織</span></span>
+              </div>
+              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border">
+                <span className="text-[10px] sm:text-xs text-death-muted block">最終アップデート</span>
+                <span className="text-xs sm:text-sm font-semibold text-zinc-300 block truncate mt-1">
+                  {players.length > 0 ? players[0].date : "-"}
+                </span>
+              </div>
+            </div>
+
+            {/* Control & Filter Panel */}
+            <div className="bg-death-panel rounded-xl border border-death-border p-3 sm:p-4 mb-4 shadow-lg space-y-3">
+              
+              {/* Search Bar & View Mode Switch */}
+              <div className="flex gap-2">
+                <div className="relative flex-grow">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
+                    <Icons.Search />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="PSNID、クラン、罪状、備考で検索..."
+                    className="w-full pl-9 pr-8 py-2 bg-zinc-950 text-white rounded-lg border border-zinc-800 text-xs sm:text-sm focus:outline-none focus:border-red-600"
+                  />
+                  {searchTerm && (
+                    <button 
+                      onClick={() => setSearchTerm('')}
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-500 hover:text-white"
+                    >
+                      <Icons.Close />
+                    </button>
+                  )}
+                </div>
+
+                {/* Mobile Filter Toggle Button */}
+                <button
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  className={`sm:hidden p-2 rounded-lg border flex items-center justify-center transition-colors ${showMobileFilters || selectedClan !== 'ALL' || selectedDanger !== 'ALL' || selectedCrimeTag !== 'ALL' ? 'bg-red-950 text-red-400 border-red-700' : 'bg-zinc-950 text-zinc-400 border-zinc-800'}`}
+                  title="詳細フィルター"
+                >
+                  <Icons.Filter />
+                </button>
+
+                {/* View Switcher */}
+                <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800 shrink-0">
+                  <button
+                    onClick={() => setViewMode('card')}
+                    className={`px-2.5 py-1 rounded text-xs flex items-center gap-1 transition-colors ${viewMode === 'card' ? 'bg-red-900/60 text-white border border-red-700/50' : 'text-zinc-400'}`}
+                    title="カード表示"
+                  >
+                    <Icons.Grid />
+                    <span className="hidden sm:inline">カード</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`px-2.5 py-1 rounded text-xs flex items-center gap-1 transition-colors ${viewMode === 'table' ? 'bg-red-900/60 text-white border border-red-700/50' : 'text-zinc-400'}`}
+                    title="テーブル表示"
+                  >
+                    <Icons.Table />
+                    <span className="hidden sm:inline">リスト</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Filters (Always visible on Desktop, collapsible on Mobile) */}
+              <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-zinc-800/60 ${showMobileFilters ? 'block' : 'hidden sm:grid'}`}>
+                <div>
+                  <label className="block text-[11px] text-zinc-400 mb-1">所属クラン</label>
+                  <select
+                    value={selectedClan}
+                    onChange={(e) => setSelectedClan(e.target.value)}
+                    className="w-full bg-zinc-950 text-zinc-200 border border-zinc-800 rounded py-1.5 px-2.5 text-xs focus:outline-none focus:border-red-600"
+                  >
+                    <option value="ALL">すべてのクラン ({clansList.length})</option>
+                    {clansList.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-zinc-400 mb-1">危険度ランク</label>
+                  <select
+                    value={selectedDanger}
+                    onChange={(e) => setSelectedDanger(e.target.value)}
+                    className="w-full bg-zinc-950 text-zinc-200 border border-zinc-800 rounded py-1.5 px-2.5 text-xs focus:outline-none focus:border-red-600"
+                  >
+                    <option value="ALL">すべての危険度</option>
+                    <option value="S">S級 (凶悪)</option>
+                    <option value="A">A級 (高警戒)</option>
+                    <option value="B">B級 (注意)</option>
+                    <option value="C">C級 (一般)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-zinc-400 mb-1">ソート順</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full bg-zinc-950 text-zinc-200 border border-zinc-800 rounded py-1.5 px-2.5 text-xs focus:outline-none focus:border-red-600"
+                  >
+                    <option value="date-desc">更新日 (最新順)</option>
+                    <option value="date-asc">更新日 (古い順)</option>
+                    <option value="danger-desc">危険度 (高い順)</option>
+                    <option value="psnid-asc">PSNID (アルファベット順)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Crime Tag Quick Filters */}
+              {allCrimeTags.length > 0 && (
+                <div className={`pt-2 ${showMobileFilters ? 'block' : 'hidden sm:block'}`}>
+                  <div className="text-[11px] text-zinc-400 mb-1.5 flex items-center justify-between">
+                    <span>罪状でフィルター:</span>
+                    {selectedCrimeTag !== 'ALL' && (
+                      <button onClick={() => setSelectedCrimeTag('ALL')} className="text-red-400 text-[11px] underline">
+                        解除
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                    <button
+                      onClick={() => setSelectedCrimeTag('ALL')}
+                      className={`px-2 py-1 rounded-md text-xs min-h-[32px] sm:min-h-0 ${selectedCrimeTag === 'ALL' ? 'bg-red-800 text-white border border-red-500' : 'bg-zinc-800/80 text-zinc-400'}`}
+                    >
+                      すべて
+                    </button>
+                    {allCrimeTags.map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => setSelectedCrimeTag(tag)}
+                        className={`px-2 py-1 rounded-md text-xs min-h-[32px] sm:min-h-0 transition-colors ${selectedCrimeTag === tag ? 'bg-red-800 text-white border border-red-500' : 'bg-zinc-800/80 text-zinc-300 border border-zinc-700/50'}`}
+                      >
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Results Header */}
+            <div className="flex items-center justify-between mb-3 px-1 text-xs text-zinc-400">
+              <span>検索結果: <strong className="text-white">{filteredPlayers.length}</strong> 件</span>
+              {(searchTerm || selectedClan !== 'ALL' || selectedCrimeTag !== 'ALL' || selectedDanger !== 'ALL') && (
+                <button
+                  onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }}
+                  className="text-red-400 hover:text-red-300 flex items-center gap-1"
+                >
+                  <Icons.Reset /> 検索リセット
+                </button>
+              )}
+            </div>
+
+            {/* Content View: Card vs Table */}
+            {filteredPlayers.length === 0 ? (
+              <div className="bg-death-panel rounded-xl border border-death-border p-8 text-center my-6">
+                <div className="w-12 h-12 mx-auto mb-3 text-zinc-600 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800">
+                  <Icons.Search />
+                </div>
+                <h3 className="text-sm font-bold text-zinc-300">条件に一致するターゲットが見つかりません</h3>
+                <p className="text-xs text-zinc-500 mt-1 mb-4">キーワードを変えるかフィルターを解除してください。</p>
+                <button
+                  onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }}
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded border border-zinc-700"
+                >
+                  すべての検索条件をリセット
+                </button>
+              </div>
+            ) : viewMode === 'card' ? (
+              /* CARD VIEW (Optimized for Mobile Touch) */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredPlayers.map((player) => (
+                  <div
+                    key={player.id}
+                    onClick={() => setSelectedPlayer(player)}
+                    className="bg-death-panel rounded-xl border border-death-border p-3.5 hover:border-red-800/70 cursor-pointer active:scale-[0.99] transition-all card-glow flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Top Header inside Card */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-mono text-sm sm:text-base font-bold text-white tracking-wide">
+                              {player.psnid}
+                            </span>
+                            <button
+                              onClick={(e) => handleCopyPSNID(player.psnid, e)}
+                              className="p-1.5 text-zinc-400 hover:text-white rounded active:bg-zinc-800"
+                              title="IDコピー"
+                            >
+                              {copiedId === player.psnid ? <Icons.Check /> : <Icons.Copy />}
+                            </button>
+                          </div>
+                          {player.clan && player.clan !== "-" && (
+                            <span className="text-[11px] text-zinc-400">
+                              クラン: <strong className="text-zinc-200">{player.clan}</strong>
+                            </span>
+                          )}
+                        </div>
+                        <div>{renderDangerBadge(player.danger)}</div>
+                      </div>
+
+                      {/* Crimes Badges */}
+                      <div className="flex flex-wrap gap-1 my-2.5">
+                        {player.crimes && player.crimes.map((crime, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded bg-red-950/70 text-red-300 border border-red-900/80 text-[11px]"
+                          >
+                            #{crime}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Note snippet */}
+                      <p className="text-xs text-zinc-400 line-clamp-2 bg-zinc-950/80 p-2 rounded border border-zinc-900/80 mb-2">
+                        {player.note || "備考なし"}
+                      </p>
+                    </div>
+
+                    {/* Bottom Metadata */}
+                    <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-2 border-t border-zinc-800/60 font-mono">
+                      <span>{player.date}</span>
+                      <span className="text-red-400 font-sans">タップして詳細 →</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* TABLE VIEW (Horizontal Scroll friendly) */
+              <div className="bg-death-panel rounded-xl border border-death-border shadow-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-zinc-950 text-zinc-400 text-[11px] uppercase border-b border-zinc-800 font-cinzel">
+                      <tr>
+                        <th className="py-3 px-3">PSNID</th>
+                        <th className="py-3 px-2">クラン</th>
+                        <th className="py-3 px-2">危険度</th>
+                        <th className="py-3 px-2">罪状</th>
+                        <th className="py-3 px-3 hidden md:table-cell">備考</th>
+                        <th className="py-3 px-2">更新日</th>
+                        <th className="py-3 px-2 text-right">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/70">
+                      {filteredPlayers.map((player) => (
+                        <tr 
+                          key={player.id} 
+                          onClick={() => setSelectedPlayer(player)}
+                          className="hover:bg-zinc-800/40 cursor-pointer active:bg-zinc-800/60 transition-colors"
+                        >
+                          <td className="py-3 px-3 font-mono font-medium text-white whitespace-nowrap">
+                            <div className="flex items-center space-x-1.5">
+                              <span>{player.psnid}</span>
+                              <button
+                                onClick={(e) => handleCopyPSNID(player.psnid, e)}
+                                className="p-1 text-zinc-400 hover:text-white"
+                              >
+                                {copiedId === player.psnid ? <Icons.Check /> : <Icons.Copy />}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-3 px-2 whitespace-nowrap text-zinc-300">
+                            {player.clan && player.clan !== "-" ? (
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[11px] border border-zinc-700">
+                                {player.clan}
+                              </span>
+                            ) : "-"}
+                          </td>
+                          <td className="py-3 px-2 whitespace-nowrap">
+                            {renderDangerBadge(player.danger)}
+                          </td>
+                          <td className="py-3 px-2">
+                            <div className="flex flex-wrap gap-1 max-w-[140px] sm:max-w-none">
+                              {player.crimes && player.crimes.map((c, i) => (
+                                <span key={i} className="px-1.5 py-0.5 rounded bg-red-950/60 text-red-300 text-[10px]">
+                                  {c}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-zinc-400 text-xs max-w-xs truncate hidden md:table-cell">
+                            {player.note || "-"}
+                          </td>
+                          <td className="py-3 px-2 text-zinc-500 text-[11px] whitespace-nowrap font-mono">
+                            {player.date}
+                          </td>
+                          <td className="py-3 px-2 text-right whitespace-nowrap">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); }}
+                              className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-xs border border-zinc-700"
+                            >
+                              詳細
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* MOBILE FIXED BOTTOM ACTION BAR */}
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-black/95 border-t border-death-border px-4 py-2.5 flex items-center justify-around backdrop-blur-md">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex-1 mr-2 py-2 bg-red-700 active:bg-red-600 text-white font-semibold text-xs rounded border border-red-500 flex items-center justify-center gap-1 shadow-lg"
+            >
+              <Icons.Plus />
+              <span>ターゲット追加</span>
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="p-2.5 bg-zinc-800 text-zinc-300 rounded border border-zinc-700"
+              title="CSV出力"
+            >
+              <Icons.Download />
+            </button>
+          </div>
+
+          {/* PLAYER DETAIL MODAL (Mobile Bottom Sheet / Desktop Center Modal) */}
+          {selectedPlayer && (
+            <div 
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+              onClick={() => setSelectedPlayer(null)}
+            >
+              <div 
+                className="bg-death-panel border-t sm:border border-red-900/60 rounded-t-2xl sm:rounded-xl max-w-xl w-full p-5 shadow-2xl overflow-y-auto max-h-[85vh] sm:max-h-none animate-slide-up sm:animate-none notebook-border"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Drag Indicator for mobile */}
+                <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-4 sm:hidden"></div>
+
+                {/* Modal Header */}
+                <div className="flex items-start justify-between pb-3 border-b border-zinc-800">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h2 className="text-lg sm:text-xl font-bold font-mono text-white">
+                        {selectedPlayer.psnid}
+                      </h2>
+                      <button
+                        onClick={(e) => handleCopyPSNID(selectedPlayer.psnid, e)}
+                        className="px-2 py-1 text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded border border-zinc-700 flex items-center gap-1"
+                      >
+                        {copiedId === selectedPlayer.psnid ? <Icons.Check /> : <Icons.Copy />}
+                        <span>IDコピー</span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      所属組織: <span className="text-zinc-200 font-semibold">{selectedPlayer.clan || "-"}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedPlayer(null)}
+                    className="text-zinc-400 hover:text-white p-1 rounded bg-zinc-800/50"
+                  >
+                    <Icons.Close />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="py-4 space-y-3.5">
+                  <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-lg border border-zinc-800">
+                    <div>
+                      <span className="text-[10px] text-zinc-500 block">判定危険度ランク</span>
+                      <div className="mt-1">{renderDangerBadge(selectedPlayer.danger)}</div>
+                    </div>
+                    {selectedPlayer.platform && (
+                      <div className="text-right">
+                        <span className="text-[10px] text-zinc-500 block">プラットフォーム</span>
+                        <span className="text-xs font-mono font-semibold text-zinc-300">{selectedPlayer.platform}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-semibold text-zinc-400 block mb-1">認定罪状タグ</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedPlayer.crimes && selectedPlayer.crimes.map((c, idx) => (
+                        <span key={idx} className="px-2.5 py-1 rounded bg-red-950 text-red-300 border border-red-800 text-xs font-semibold">
+                          #{c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-semibold text-zinc-400 block mb-1">行動ログ・詳細備考</span>
+                    <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800 text-xs sm:text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed font-sans">
+                      {selectedPlayer.note || "詳細な記録はありません。"}
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-zinc-500 font-mono text-right">
+                    更新日時: {selectedPlayer.date}
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="pt-3 border-t border-zinc-800 flex justify-end">
+                  <button
+                    onClick={() => setSelectedPlayer(null)}
+                    className="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-medium rounded border border-zinc-700"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ADD TARGET MODAL */}
+          {isAddModalOpen && (
+            <AddPlayerModal
+              onClose={() => setIsAddModalOpen(false)}
+              onAdd={handleAddPlayer}
+            />
+          )}
+
+          {/* Toast Notification */}
+          {toastMessage && (
+            <div className="fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 bg-red-950 text-white border border-red-700 px-3.5 py-2.5 rounded-lg shadow-2xl flex items-center gap-2">
+              <Icons.Skull />
+              <span className="text-xs font-medium">{toastMessage}</span>
+            </div>
+          )}
+        </div>
+      );
     }
 
-    // 初回読み込み
-    window.onload = loadData;
-</script>
+    // Modal for adding player
+    function AddPlayerModal({ onClose, onAdd }) {
+      const [psnid, setPsnid] = useState('');
+      const [clan, setClan] = useState('');
+      const [crimesInput, setCrimesInput] = useState('');
+      const [note, setNote] = useState('');
+      const [danger, setDanger] = useState('B');
+      const [platform, setPlatform] = useState('PS5');
 
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!psnid.trim()) return;
+
+        const crimesList = crimesInput
+          .split(/[,、\s]+/)
+          .map(c => c.trim())
+          .filter(c => c.length > 0);
+
+        onAdd({
+          psnid: psnid.trim(),
+          clan: clan.trim() || "-",
+          crimes: crimesList.length > 0 ? crimesList : ["要確認"],
+          note: note.trim(),
+          danger,
+          platform
+        });
+      };
+
+      return (
+        <div 
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+          onClick={onClose}
+        >
+          <div 
+            className="bg-death-panel border-t sm:border border-red-900 rounded-t-2xl sm:rounded-xl max-w-lg w-full p-5 shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up sm:animate-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-3 sm:hidden"></div>
+            
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 font-cinzel">
+                <Icons.Skull /> ターゲット追加
+              </h3>
+              <button onClick={onClose} className="text-zinc-400 hover:text-white p-1">
+                <Icons.Close />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="py-3 space-y-3 text-xs sm:text-sm">
+              <div>
+                <label className="block font-medium text-zinc-300 mb-1">
+                  PSNID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={psnid}
+                  onChange={(e) => setPsnid(e.target.value)}
+                  placeholder="例: target-player-01"
+                  className="w-full bg-zinc-950 text-white px-3 py-2 rounded border border-zinc-800 font-mono text-xs focus:outline-none focus:border-red-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-medium text-zinc-300 mb-1">所属クラン</label>
+                  <input
+                    type="text"
+                    value={clan}
+                    onChange={(e) => setClan(e.target.value)}
+                    placeholder="例: tmp"
+                    className="w-full bg-zinc-950 text-white px-3 py-2 rounded border border-zinc-800 text-xs focus:outline-none focus:border-red-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-zinc-300 mb-1">危険度</label>
+                  <select
+                    value={danger}
+                    onChange={(e) => setDanger(e.target.value)}
+                    className="w-full bg-zinc-950 text-white px-3 py-2 rounded border border-zinc-800 text-xs focus:outline-none focus:border-red-600"
+                  >
+                    <option value="S">S級 (凶悪)</option>
+                    <option value="A">A級 (高警戒)</option>
+                    <option value="B">B級 (注意)</option>
+                    <option value="C">C級 (一般)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-zinc-300 mb-1">罪状タグ (カンマ区切り)</label>
+                <input
+                  type="text"
+                  value={crimesInput}
+                  onChange={(e) => setCrimesInput(e.target.value)}
+                  placeholder="例: 放置, 煽り, 故意FF"
+                  className="w-full bg-zinc-950 text-white px-3 py-2 rounded border border-zinc-800 text-xs focus:outline-none focus:border-red-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-zinc-300 mb-1">備考・詳細</label>
+                <textarea
+                  rows="3"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="詳細な行動記録、マッチ日時のメモ..."
+                  className="w-full bg-zinc-950 text-white px-3 py-2 rounded border border-zinc-800 text-xs focus:outline-none focus:border-red-600"
+                ></textarea>
+              </div>
+
+              <div className="pt-3 border-t border-zinc-800 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 bg-zinc-800 text-zinc-300 rounded text-xs border border-zinc-700"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-red-700 hover:bg-red-600 text-white font-medium text-xs rounded border border-red-500"
+                >
+                  ノートへ保存
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
