@@ -80,6 +80,9 @@
     .notebook-border { border-left: 4px solid #dc2626; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .animate-slide-up { animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    /* Horizontal scroll for tabs */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="bg-death-bg text-death-text font-sans antialiased min-h-screen selection:bg-red-900 selection:text-white pb-20 sm:pb-8">
@@ -88,10 +91,8 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // ★ 現在設定されているAPI_URLです（変更不要） ★
     const API_URL = "https://script.google.com/macros/s/AKfycbxGxb8a_aAYBNxvLRYCSKj1hc-crI2ljyR2KDU7KaxFc-vw3qsFTkjG9vSdtJvWS1-d/exec";
 
-    // SVG アイコン群
     const Icons = {
       Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
       Filter: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>,
@@ -110,8 +111,11 @@
     };
 
     function App() {
-      const [players, setPlayers] = useState([]);
+      // 4つのリストデータを保持
+      const [playersData, setPlayersData] = useState({ main: [], lag: [], au: [], vs4: [] });
+      const [activeTab, setActiveTab] = useState('main'); // 'main' | 'lag' | 'au' | 'vs4'
       const [isLoading, setIsLoading] = useState(true);
+
       const [searchTerm, setSearchTerm] = useState("");
       const [selectedClan, setSelectedClan] = useState("ALL");
       const [selectedCrimeTag, setSelectedCrimeTag] = useState("ALL");
@@ -120,13 +124,14 @@
       
       const [viewMode, setViewMode] = useState(() => window.innerWidth < 640 ? 'card' : 'table');
       const [selectedPlayer, setSelectedPlayer] = useState(null);
-      
-      // フォームモーダル状態 (nullなら閉じる。追加時は'add'、編集時はplayerオブジェクトが入る)
       const [formTarget, setFormTarget] = useState(null);
       
       const [copiedId, setCopiedId] = useState(null);
       const [toastMessage, setToastMessage] = useState("");
       const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+      // 現在のタブのデータを取得
+      const players = useMemo(() => playersData[activeTab] || [], [playersData, activeTab]);
 
       useEffect(() => {
         const loadData = async () => {
@@ -134,31 +139,43 @@
             const response = await fetch(API_URL);
             const data = await response.json();
             
-            const formattedData = data
-              .filter(row => row.PSNID && String(row.PSNID).trim() !== "")
-              .map((row, idx) => {
+            const formatList = (list, defaultDanger, forceCrime = null) => {
+              return list.map((row, idx) => {
                 let crimesList = [];
-                if (row.罪状) {
+                if (forceCrime) {
+                  crimesList = [forceCrime];
+                } else if (row.罪状) {
                   crimesList = row.罪状.split(/[,、\s]+/).map(c => c.trim()).filter(c => c);
                 }
                 
-                let dangerRank = "C";
+                let dangerRank = defaultDanger;
                 if(row.備考 && row.備考.includes("終身名誉")) dangerRank = "S";
                 else if (row.備考 && row.備考.includes("FF")) dangerRank = "A";
 
                 return {
-                  id: String(Date.now() + idx),
-                  psnid: row.PSNID,
+                  id: String(Date.now() + Math.random()),
+                  psnid: row.PSNID || row.psnid,
                   clan: row['所属クラン(当時)'] || row.クラン || "-",
                   crimes: crimesList.length > 0 ? crimesList : ["不明"],
                   note: row.備考 || "-",
-                  date: row.更新日 || "",
+                  date: row.更新日 || "-",
                   danger: dangerRank,
                   platform: "Unknown"
                 };
               });
+            };
 
-            setPlayers(formattedData);
+            // 古い配列形式のレスポンスが来た場合のフォールバック
+            if (Array.isArray(data)) {
+              setPlayersData({ main: formatList(data, "C"), lag: [], au: [], vs4: [] });
+            } else {
+              setPlayersData({
+                main: formatList(data.main || [], "C"),
+                lag: formatList(data.lag || [], "B", "ラグ対面"),
+                au: formatList(data.au || [], "A", "-AU"),
+                vs4: formatList(data.vs4 || [], "B", "うまお(Vs4)")
+              });
+            }
           } catch (error) {
             console.error("Fetch error:", error);
             showToast("データベースへの接続に失敗しました");
@@ -166,19 +183,26 @@
             setIsLoading(false);
           }
         };
-
         loadData();
       }, []);
 
       useEffect(() => {
         const handleResize = () => {
           if (window.innerWidth < 640 && viewMode === 'table') {
-            // モバイル時はカード推奨
+             // 
           }
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
       }, [viewMode]);
+
+      // タブ切り替え時に検索条件をリセット
+      useEffect(() => {
+        setSearchTerm('');
+        setSelectedClan('ALL');
+        setSelectedCrimeTag('ALL');
+        setSelectedDanger('ALL');
+      }, [activeTab]);
 
       const showToast = (msg) => {
         setToastMessage(msg);
@@ -241,6 +265,10 @@
 
           return matchesSearch && matchesClan && matchesCrime && matchesDanger;
         }).sort((a, b) => {
+          // 日付ハイフンのものは一番下に
+          if (a.date === "-" && b.date !== "-") return 1;
+          if (a.date !== "-" && b.date === "-") return -1;
+
           if (sortBy === "date-desc") return new Date(b.date) - new Date(a.date);
           if (sortBy === "date-asc") return new Date(a.date) - new Date(b.date);
           if (sortBy === "psnid-asc") return a.psnid.localeCompare(b.psnid);
@@ -252,7 +280,7 @@
         });
       }, [players, searchTerm, selectedClan, selectedCrimeTag, selectedDanger, sortBy]);
 
-      // スプレッドシートへのデータ送信 (追加 ＆ 編集)
+      // スプレッドシートへのデータ送信 (本編のみ)
       const handleSavePlayer = async (newPlayerData, isEdit, originalPsnid) => {
         showToast("データベースへ送信中...");
         
@@ -290,13 +318,19 @@
           };
           
           if (isEdit) {
-            setPlayers(players.map(p => p.psnid === originalPsnid ? newEntry : p));
+            setPlayersData(prev => ({
+              ...prev,
+              main: prev.main.map(p => p.psnid === originalPsnid ? newEntry : p)
+            }));
             if (selectedPlayer && selectedPlayer.psnid === originalPsnid) {
-              setSelectedPlayer(newEntry); // 詳細画面も更新
+              setSelectedPlayer(newEntry);
             }
             showToast(`ターゲット「${newEntry.psnid}」を更新しました`);
           } else {
-            setPlayers([newEntry, ...players]);
+            setPlayersData(prev => ({
+              ...prev,
+              main: [newEntry, ...prev.main]
+            }));
             showToast(`ターゲット「${newEntry.psnid}」を追加しました`);
           }
           setFormTarget(null);
@@ -322,7 +356,7 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `deathnote_targets_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute("download", `deathnote_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -371,13 +405,15 @@
                 </div>
 
                 <div className="hidden sm:flex items-center space-x-2">
-                  <button
-                    onClick={() => setFormTarget('add')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-red-700 hover:bg-red-600 text-white font-medium text-xs rounded border border-red-500 transition-all shadow-md"
-                  >
-                    <Icons.Plus />
-                    <span>ターゲット追加</span>
-                  </button>
+                  {activeTab === 'main' && (
+                    <button
+                      onClick={() => setFormTarget('add')}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-red-700 hover:bg-red-600 text-white font-medium text-xs rounded border border-red-500 transition-all shadow-md"
+                    >
+                      <Icons.Plus />
+                      <span>ターゲット追加</span>
+                    </button>
+                  )}
                   <button
                     onClick={handleExportCSV}
                     title="CSV出力"
@@ -391,28 +427,33 @@
           </header>
 
           <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
-              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border">
-                <span className="text-[10px] sm:text-xs text-death-muted block">全ターゲット数</span>
-                <span className="text-lg sm:text-2xl font-bold font-cinzel text-white">{players.length} <span className="text-xs font-sans text-zinc-500">件</span></span>
-              </div>
-              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border border-l-2 border-l-red-600">
-                <span className="text-[10px] sm:text-xs text-death-muted block">S級 (凶悪)</span>
-                <span className="text-lg sm:text-2xl font-bold font-cinzel text-red-500">
-                  {players.filter(p => p.danger === 'S').length} <span className="text-xs font-sans text-zinc-500">名</span>
-                </span>
-              </div>
-              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border">
-                <span className="text-[10px] sm:text-xs text-death-muted block">登録クラン数</span>
-                <span className="text-lg sm:text-2xl font-bold font-cinzel text-zinc-200">{clansList.length} <span className="text-xs font-sans text-zinc-500 font-normal">組織</span></span>
-              </div>
-              <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border">
-                <span className="text-[10px] sm:text-xs text-death-muted block">最終アップデート</span>
-                <span className="text-xs sm:text-sm font-semibold text-zinc-300 block truncate mt-1">
-                  {players.length > 0 ? players[0].date : "-"}
-                </span>
-              </div>
+            
+            {/* ★ タブ切り替えメニュー ★ */}
+            <div className="flex space-x-1.5 sm:space-x-2 bg-zinc-950/50 p-1.5 rounded-xl border border-zinc-800/80 mb-5 overflow-x-auto hide-scrollbar">
+              <button 
+                onClick={() => setActiveTab('main')} 
+                className={`flex-1 min-w-[80px] px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'main' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
+              >
+                本編 ({playersData.main.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('lag')} 
+                className={`flex-1 min-w-[80px] px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'lag' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
+              >
+                ラグ対面 ({playersData.lag.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('au')} 
+                className={`flex-1 min-w-[80px] px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'au' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
+              >
+                -AU ({playersData.au.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('vs4')} 
+                className={`flex-1 min-w-[80px] px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'vs4' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
+              >
+                うまお/Vs4 ({playersData.vs4.length})
+              </button>
             </div>
 
             {/* Control & Filter Panel */}
@@ -648,12 +689,14 @@
                             {player.date}
                           </td>
                           <td className="py-3 px-2 text-right whitespace-nowrap space-x-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setFormTarget(player); }}
-                              className="px-2 py-1 bg-red-900/60 text-red-300 rounded text-xs border border-red-800 hover:bg-red-800"
-                            >
-                              編集
-                            </button>
+                            {activeTab === 'main' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setFormTarget(player); }}
+                                className="px-2 py-1 bg-red-900/60 text-red-300 rounded text-xs border border-red-800 hover:bg-red-800"
+                              >
+                                編集
+                              </button>
+                            )}
                             <button
                               onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); }}
                               className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-xs border border-zinc-700"
@@ -671,17 +714,21 @@
           </main>
 
           <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-black/95 border-t border-death-border px-4 py-2.5 flex items-center justify-around backdrop-blur-md">
-            <button
-              onClick={() => setFormTarget('add')}
-              className="flex-1 mr-2 py-2 bg-red-700 active:bg-red-600 text-white font-semibold text-xs rounded border border-red-500 flex items-center justify-center gap-1 shadow-lg"
-            >
-              <Icons.Plus />
-              <span>ターゲット追加</span>
-            </button>
+            {activeTab === 'main' && (
+              <button
+                onClick={() => setFormTarget('add')}
+                className="flex-1 mr-2 py-2 bg-red-700 active:bg-red-600 text-white font-semibold text-xs rounded border border-red-500 flex items-center justify-center gap-1 shadow-lg"
+              >
+                <Icons.Plus />
+                <span>ターゲット追加</span>
+              </button>
+            )}
             <button
               onClick={handleExportCSV}
-              className="p-2.5 bg-zinc-800 text-zinc-300 rounded border border-zinc-700"
+              className={`p-2.5 bg-zinc-800 text-zinc-300 rounded border border-zinc-700 ${activeTab !== 'main' ? 'flex-1' : ''}`}
+              title="CSV出力"
             >
+              {activeTab !== 'main' && <span className="mr-2 text-xs font-bold">CSV出力</span>}
               <Icons.Download />
             </button>
           </div>
@@ -751,12 +798,14 @@
                 </div>
 
                 <div className="pt-3 border-t border-zinc-800 flex justify-end gap-2">
-                  <button
-                    onClick={() => { setFormTarget(selectedPlayer); }}
-                    className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-red-900 hover:bg-red-800 text-white text-xs font-medium rounded border border-red-700 flex justify-center items-center gap-1"
-                  >
-                    <Icons.Edit /> 編集する
-                  </button>
+                  {activeTab === 'main' && (
+                    <button
+                      onClick={() => { setFormTarget(selectedPlayer); }}
+                      className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-red-900 hover:bg-red-800 text-white text-xs font-medium rounded border border-red-700 flex justify-center items-center gap-1"
+                    >
+                      <Icons.Edit /> 編集する
+                    </button>
+                  )}
                   <button
                     onClick={() => setSelectedPlayer(null)}
                     className="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-medium rounded border border-zinc-700"
