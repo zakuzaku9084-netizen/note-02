@@ -113,50 +113,53 @@
 
       const players = useMemo(() => playersData[activeTab] || [], [playersData, activeTab]);
 
-      useEffect(() => {
-        const loadData = async () => {
-          try {
-            const response = await fetch(API_URL);
-            const data = await response.json();
-            
-            const formatList = (list, defaultDanger, forceCrime = null) => {
-              return list.map((row, idx) => {
-                let crimesList = [];
-                if (forceCrime) {
-                  crimesList = [forceCrime];
-                } else if (row.罪状) {
-                  crimesList = row.罪状.split(/[,、\s]+/).map(c => c.trim()).filter(c => c);
-                }
-                
-                let dangerRank = defaultDanger;
-                if(row.備考 && row.備考.includes("終身名誉")) dangerRank = "S";
-                else if (row.備考 && row.備考.includes("FF")) dangerRank = "A";
+      const loadData = async () => {
+        setIsLoading(true);
+        try {
+          // ★ キャッシュ回避のため、URLの後ろに現在の時刻（?t=数字）をくっつけて毎回最新を取得
+          const response = await fetch(`${API_URL}?t=${Date.now()}`);
+          const data = await response.json();
+          
+          const formatList = (list, defaultDanger, forceCrime = null) => {
+            return list.map((row, idx) => {
+              let crimesList = [];
+              if (forceCrime) {
+                crimesList = [forceCrime];
+              } else if (row.罪状) {
+                crimesList = row.罪状.split(/[,、\s]+/).map(c => c.trim()).filter(c => c);
+              }
+              
+              let dangerRank = defaultDanger;
+              if(row.備考 && row.備考.includes("終身名誉")) dangerRank = "S";
+              else if (row.備考 && row.備考.includes("FF")) dangerRank = "A";
 
-                return {
-                  id: String(Date.now() + Math.random()),
-                  psnid: row.PSNID || row.psnid,
-                  clan: row['所属クラン(当時)'] || row.クラン || "-",
-                  crimes: crimesList.length > 0 ? crimesList : ["不明"],
-                  note: row.備考 || "-",
-                  date: row.更新日 || "-",
-                  danger: dangerRank,
-                  platform: "Unknown"
-                };
-              });
-            };
-
-            setPlayersData({
-              main: formatList(data.main || [], "C"),
-              lag: formatList(data.lag || [], "B", "ラグ対面"),
-              au: formatList(data.au || [], "A", "-AU")
+              return {
+                id: String(Date.now() + Math.random()),
+                psnid: row.PSNID || row.psnid,
+                clan: row['所属クラン(当時)'] || row.クラン || "-",
+                crimes: crimesList.length > 0 ? crimesList : ["不明"],
+                note: row.備考 || "-",
+                date: row.更新日 || "-",
+                danger: dangerRank,
+                platform: "Unknown"
+              };
             });
-          } catch (error) {
-            console.error("Fetch error:", error);
-            showToast("データベースへの接続に失敗しました");
-          } finally {
-            setIsLoading(false);
-          }
-        };
+          };
+
+          setPlayersData({
+            main: formatList(data.main || [], "C"),
+            lag: formatList(data.lag || [], "B", "ラグ対面"),
+            au: formatList(data.au || [], "A", "-AU")
+          });
+        } catch (error) {
+          console.error("Fetch error:", error);
+          showToast("データベースへの接続に失敗しました");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      useEffect(() => {
         loadData();
       }, []);
 
@@ -274,21 +277,11 @@
             body: JSON.stringify(payload)
           });
 
-          const newEntry = {
-            ...newPlayerData,
-            id: isEdit ? newPlayerData.id : Date.now().toString(),
-            date: dateStr
-          };
+          // 通信成功後、最新状態をスプレッドシートから引っ張ってくる
+          await loadData();
           
-          if (isEdit) {
-            setPlayersData(prev => ({ ...prev, main: prev.main.map(p => p.psnid === originalPsnid ? newEntry : p) }));
-            if (selectedPlayer && selectedPlayer.psnid === originalPsnid) setSelectedPlayer(newEntry);
-            showToast(`ターゲット「${newEntry.psnid}」を更新しました`);
-          } else {
-            setPlayersData(prev => ({ ...prev, main: [newEntry, ...prev.main] }));
-            showToast(`ターゲット「${newEntry.psnid}」を追加しました`);
-          }
           setFormTarget(null);
+          showToast(isEdit ? `ターゲット「${newPlayerData.psnid}」を更新しました` : `ターゲット「${newPlayerData.psnid}」を追加しました`);
         } catch (error) {
           console.error(error);
           showToast("保存に失敗しました。時間をおいて再試行してください。");
@@ -310,13 +303,11 @@
             body: JSON.stringify({ action: 'delete', targetPsnid })
           });
 
-          setPlayersData(prev => ({
-            ...prev,
-            main: prev.main.filter(p => p.psnid !== targetPsnid)
-          }));
+          // 削除成功後、最新状態をスプレッドシートから引っ張ってくる
+          await loadData();
           
           setSelectedPlayer(null); // 詳細モーダルを閉じる
-          showToast(`ターゲット「${targetPsnid}」を削除しました`);
+          showToast(`ターゲット「${targetPsnid}」を完全に削除しました`);
         } catch (error) {
           console.error(error);
           showToast("削除に失敗しました。");
@@ -379,6 +370,9 @@
                 </div>
 
                 <div className="hidden sm:flex items-center space-x-2">
+                  <button onClick={loadData} title="最新データに更新" className="p-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700">
+                    <Icons.Reset />
+                  </button>
                   {activeTab === 'main' && (
                     <button
                       onClick={() => setFormTarget('add')}
@@ -525,11 +519,16 @@
 
             <div className="flex items-center justify-between mb-3 px-1 text-xs text-zinc-400">
               <span>検索結果: <strong className="text-white">{filteredPlayers.length}</strong> 件</span>
-              {(searchTerm || selectedClan !== 'ALL' || selectedCrimeTag !== 'ALL' || selectedDanger !== 'ALL') && (
-                <button onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }} className="text-red-400 hover:text-red-300 flex items-center gap-1">
-                  <Icons.Reset /> 検索リセット
+              <div className="flex items-center gap-2">
+                <button onClick={loadData} className="text-zinc-400 hover:text-white flex items-center gap-1">
+                  <Icons.Reset /> 更新
                 </button>
-              )}
+                {(searchTerm || selectedClan !== 'ALL' || selectedCrimeTag !== 'ALL' || selectedDanger !== 'ALL') && (
+                  <button onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }} className="text-red-400 hover:text-red-300 flex items-center gap-1 ml-2 border-l border-zinc-700 pl-2">
+                    <Icons.Close /> 検索解除
+                  </button>
+                )}
+              </div>
             </div>
 
             {filteredPlayers.length === 0 ? (
