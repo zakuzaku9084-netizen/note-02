@@ -71,13 +71,13 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // ★ ここに新しく発行したURLを設定しました ★
+    // ★ 最新URLを設定済み ★
     const API_URL = "https://script.google.com/macros/s/AKfycbwfYAGXfjWtTQAqEzj8ODrv8xILFUJdkyLX4krAIcuy98y0cUbj5j2M4QIUp_fzrL3W/exec";
 
     const Icons = {
       Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
       Filter: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>,
-      Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>,
+      Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>,
       Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>,
       Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
       Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
@@ -113,43 +113,46 @@
 
       const players = useMemo(() => playersData[activeTab] || [], [playersData, activeTab]);
 
+      const formatServerData = (data) => {
+        const formatList = (list, defaultDanger, forceCrime = null) => {
+          return list.map((row) => {
+            let crimesList = [];
+            if (forceCrime) {
+              crimesList = [forceCrime];
+            } else if (row.罪状) {
+              crimesList = row.罪状.split(/[,、\s]+/).map(c => c.trim()).filter(c => c);
+            }
+            
+            let dangerRank = defaultDanger;
+            if(row.備考 && row.備考.includes("終身名誉")) dangerRank = "S";
+            else if (row.備考 && row.備考.includes("FF")) dangerRank = "A";
+
+            return {
+              id: String(Date.now() + Math.random()),
+              psnid: row.PSNID || row.psnid,
+              clan: row['所属クラン(当時)'] || row.クラン || "-",
+              crimes: crimesList.length > 0 ? crimesList : ["不明"],
+              note: row.備考 || "-",
+              date: row.更新日 || "-",
+              danger: dangerRank,
+              platform: "Unknown"
+            };
+          });
+        };
+
+        setPlayersData({
+          main: formatList(data.main || [], "C"),
+          lag: formatList(data.lag || [], "B", "ラグ対面"),
+          au: formatList(data.au || [], "A", "-AU")
+        });
+      };
+
       const loadData = async () => {
         setIsLoading(true);
         try {
-          const response = await fetch(`${API_URL}?t=${Date.now()}`);
+          const response = await fetch(`${API_URL}?action=read&t=${Date.now()}`);
           const data = await response.json();
-          
-          const formatList = (list, defaultDanger, forceCrime = null) => {
-            return list.map((row, idx) => {
-              let crimesList = [];
-              if (forceCrime) {
-                crimesList = [forceCrime];
-              } else if (row.罪状) {
-                crimesList = row.罪状.split(/[,、\s]+/).map(c => c.trim()).filter(c => c);
-              }
-              
-              let dangerRank = defaultDanger;
-              if(row.備考 && row.備考.includes("終身名誉")) dangerRank = "S";
-              else if (row.備考 && row.備考.includes("FF")) dangerRank = "A";
-
-              return {
-                id: String(Date.now() + Math.random()),
-                psnid: row.PSNID || row.psnid,
-                clan: row['所属クラン(当時)'] || row.クラン || "-",
-                crimes: crimesList.length > 0 ? crimesList : ["不明"],
-                note: row.備考 || "-",
-                date: row.更新日 || "-",
-                danger: dangerRank,
-                platform: "Unknown"
-              };
-            });
-          };
-
-          setPlayersData({
-            main: formatList(data.main || [], "C"),
-            lag: formatList(data.lag || [], "B", "ラグ対面"),
-            au: formatList(data.au || [], "A", "-AU")
-          });
+          formatServerData(data);
         } catch (error) {
           console.error("Fetch error:", error);
           showToast("データベースへの接続に失敗しました");
@@ -161,12 +164,6 @@
       useEffect(() => {
         loadData();
       }, []);
-
-      useEffect(() => {
-        const handleResize = () => {};
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-      }, [viewMode]);
 
       useEffect(() => {
         setSearchTerm('');
@@ -249,6 +246,7 @@
         });
       }, [players, searchTerm, selectedClan, selectedCrimeTag, selectedDanger, sortBy]);
 
+      // ★ GET通信で確実に追加・編集
       const handleSavePlayer = async (newPlayerData, isEdit, originalPsnid) => {
         showToast("データベースへ送信中...");
         
@@ -263,37 +261,38 @@
           更新日: dateStr
         };
 
-        const payload = isEdit ? { action: 'edit', targetPsnid: originalPsnid, data: sheetData } : { action: 'add', data: sheetData };
+        const action = isEdit ? 'edit' : 'add';
+        const queryParams = new URLSearchParams({
+          action,
+          targetPsnid: originalPsnid || '',
+          data: JSON.stringify(sheetData),
+          t: String(Date.now())
+        });
 
         try {
-          const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(payload)
-          });
-          
-          let result = {};
-          try { result = await response.json(); } catch(e) {}
+          const response = await fetch(`${API_URL}?${queryParams.toString()}`);
+          const result = await response.json();
           
           if (result.status === 'error') {
-             alert("システムエラーが発生しました:\n" + result.message);
-             return;
+            alert("システムエラーが発生しました:\n" + result.message);
+            return;
+          }
+          if (result.action_performed !== action) {
+            alert("【重要】\nスプレッドシート側のプログラムが保存されていません！\nApps Scriptの画面上部にある「💾（プロジェクトを保存）」ボタンを押してから、「デプロイを管理」＞「鉛筆マーク」＞「新バージョン」でデプロイしてください。");
+            return;
           }
 
-          if (result.status === 'success' && result.action_performed === undefined) {
-             alert("【警告】\nアプリに設定されているURLが古いままです！\nスプレッドシート側で「新しいデプロイ」をして、新しいURLをHTMLに貼り直してください。");
-             return;
-          }
-
-          await loadData();
+          formatServerData(result);
           setFormTarget(null);
+          setSelectedPlayer(null);
           showToast(isEdit ? `ターゲット「${newPlayerData.psnid}」を更新しました` : `ターゲット「${newPlayerData.psnid}」を追加しました`);
         } catch (error) {
           console.error(error);
-          showToast("保存に失敗しました。");
+          alert("通信エラーが発生しました:\n" + error.message);
         }
       };
 
+      // ★ GET通信で確実に削除
       const handleDeletePlayer = async (targetPsnid) => {
         if (!window.confirm(`本当に「${targetPsnid}」をデータベースから削除しますか？\nこの操作は元に戻せません。`)) {
           return;
@@ -301,32 +300,31 @@
 
         showToast("削除処理中...");
         
+        const queryParams = new URLSearchParams({
+          action: 'delete',
+          targetPsnid: targetPsnid,
+          t: String(Date.now())
+        });
+
         try {
-          const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({ action: 'delete', targetPsnid })
-          });
-          
-          let result = {};
-          try { result = await response.json(); } catch(e) {}
+          const response = await fetch(`${API_URL}?${queryParams.toString()}`);
+          const result = await response.json();
 
           if (result.status === 'error') {
-             alert("システムエラーにより削除できませんでした:\n" + result.message);
-             return;
+            alert("システムエラーにより削除できませんでした:\n" + result.message);
+            return;
+          }
+          if (result.action_performed !== 'delete') {
+            alert("【重要】\nスプレッドシート側のプログラムが保存されていません！\nApps Scriptの画面上部にある「💾（プロジェクトを保存）」ボタンを押してから、「デプロイを管理」＞「鉛筆マーク」＞「新バージョン」でデプロイしてください。");
+            return;
           }
 
-          if (result.status === 'success' && result.action_performed !== 'delete') {
-             alert("【警告】\n削除機能がない古いシステムに繋がっています！\nスプレッドシート側で「新しいデプロイ」を行って新しいURLを取得し、HTMLに貼り直してください。");
-             return;
-          }
-
-          await loadData();
+          formatServerData(result);
           setSelectedPlayer(null);
           showToast(`ターゲット「${targetPsnid}」を完全に削除しました`);
         } catch (error) {
           console.error(error);
-          showToast("削除に失敗しました。");
+          alert("削除通信エラー:\n" + error.message);
         }
       };
 
