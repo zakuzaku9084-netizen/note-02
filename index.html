@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DEATH NOTE - Shared</title>
+    
+    <!-- PWA用設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DEATH NOTE">
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/8b0000/ffffff?text=D">
+    
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --card-bg: #1a1a1a;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --accent-red: #8b0000;
+            --accent-red-hover: #a50000;
+            --border-color: #333333;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Times New Roman', serif;
+            margin: 0;
+            padding: 0;
+            padding-bottom: 80px;
+        }
+        header {
+            background-color: #000;
+            border-bottom: 2px solid var(--accent-red);
+            padding: 15px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 0 0 5px var(--accent-red);
+        }
+        .container {
+            padding: 15px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        /* 検索バー */
+        .search-box { margin-bottom: 20px; }
+        .search-box input {
+            width: 100%; padding: 12px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main); border-radius: 4px;
+            font-size: 16px; box-sizing: border-box;
+        }
+        /* ターゲットカード */
+        .target-list { display: flex; flex-direction: column; gap: 15px; }
+        .target-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--accent-red);
+            padding: 15px; border-radius: 4px;
+        }
+        .target-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;
+        }
+        .psnid { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .date { font-size: 0.8rem; color: var(--text-muted); }
+        .target-details p { margin: 5px 0; font-size: 0.95rem; }
+        .label { color: var(--text-muted); font-size: 0.85rem; }
+        /* ボトムアクションバー */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background-color: #000; border-top: 1px solid var(--border-color);
+            display: flex; justify-content: space-around; padding: 10px 0; z-index: 100;
+        }
+        .bottom-bar button {
+            background: none; border: none; color: var(--text-main);
+            font-size: 1rem; padding: 10px; cursor: pointer; flex: 1;
+        }
+        .bottom-bar button:hover { color: var(--accent-red); }
+        .btn-primary { background-color: var(--accent-red) !important; color: #fff !important; border-radius: 4px; margin: 0 10px; }
+        /* モーダル */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); z-index: 200; align-items: flex-end;
+        }
+        .modal-content {
+            background-color: var(--bg-color); width: 100%;
+            border-top: 2px solid var(--accent-red); padding: 20px;
+            box-sizing: border-box; border-radius: 12px 12px 0 0; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-content h2 { margin-top: 0; color: var(--accent-red); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: var(--text-muted); }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 10px; background-color: var(--card-bg);
+            border: 1px solid var(--border-color); color: var(--text-main);
+            border-radius: 4px; box-sizing: border-box; font-size: 16px;
+        }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .form-actions button { flex: 1; padding: 12px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        .btn-cancel { background-color: #333; color: #fff; }
+        .btn-submit { background-color: var(--accent-red); color: #fff; }
+        #loading { text-align: center; padding: 20px; color: var(--accent-red); font-style: italic; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>DEATH NOTE</h1>
+</header>
+
+<div class="container">
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="PSNID, 罪状, クランで検索..." oninput="filterTargets()">
+    </div>
+
+    <div id="loading">スプレッドシートと同期中...</div>
+    
+    <div class="target-list" id="targetList">
+        <!-- JSでカードが生成されます -->
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <button onclick="window.scrollTo(0,0); document.getElementById('searchInput').focus()">🔍 検索</button>
+    <button class="btn-primary" onclick="openAddModal()">＋ ターゲット追加</button>
+</div>
+
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <h2>ターゲット登録</h2>
+        <div class="form-group">
+            <label>PSNID (必須)</label>
+            <input type="text" id="newPsnid" placeholder="例: tmp-zako">
+        </div>
+        <div class="form-group">
+            <label>所属クラン</label>
+            <input type="text" id="newClan" placeholder="例: tmp">
+        </div>
+        <div class="form-group">
+            <label>罪状</label>
+            <input type="text" id="newCrime" placeholder="例: 放置、煽り">
+        </div>
+        <div class="form-group">
+            <label>備考</label>
+            <textarea id="newNote" rows="3" placeholder="詳細な状況など"></textarea>
+        </div>
+        <div class="form-actions">
+            <button class="btn-cancel" onclick="closeAddModal()">キャンセル</button>
+            <button class="btn-submit" onclick="submitTarget()">登録する</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // ★ ここに取得したウェブアプリのURLを貼り付けます ★
+    // ==========================================
+    const API_URL = "https://script.google.com/macros/s/AKfycbxGxb8a_aAYBNxvLRYCSKj1hc-crI2ljyR2KDU7KaxFc-vw3qsFTkjG9vSdtJvWS1-d/exec"; 
+
+    let targetData = [];
+
+    // スプレッドシートからデータを取得
+    async function loadData() {
+        if(API_URL === "ここに取得したURLを貼り付けます") {
+            document.getElementById('loading').innerText = "エラー: API_URLが設定されていません。コードを書き換えてください。";
+            return;
+        }
+
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            // 空のデータを取り除くなどの整形
+            targetData = data.filter(row => row.PSNID && row.PSNID.trim() !== "");
+            
+            document.getElementById('loading').style.display = 'none';
+            renderList(targetData);
+        } catch (error) {
+            document.getElementById('loading').innerText = "データの取得に失敗しました。";
+            console.error(error);
+        }
+    }
+
+    // リストの描画
+    function renderList(data) {
+        const list = document.getElementById('targetList');
+        list.innerHTML = '';
+        
+        data.forEach(target => {
+            const card = document.createElement('div');
+            card.className = 'target-card';
+            card.innerHTML = `
+                <div class="target-header">
+                    <span class="psnid">${target.PSNID || '不明'}</span>
+                    <span class="date">${target.更新日 || ''}</span>
+                </div>
+                <div class="target-details">
+                    <p><span class="label">クラン:</span> ${target['所属クラン(当時)'] || target.クラン || '-'}</p>
+                    <p><span class="label">罪状:</span> <span style="color:var(--accent-red)">${target.罪状 || '-'}</span></p>
+                    <p><span class="label">備考:</span> ${target.備考 || '-'}</p>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    // 検索機能
+    function filterTargets() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = targetData.filter(target => {
+            const psnid = (target.PSNID || '').toLowerCase();
+            const crime = (target.罪状 || '').toLowerCase();
+            const clan = (target['所属クラン(当時)'] || target.クラン || '').toLowerCase();
+            return psnid.includes(query) || crime.includes(query) || clan.includes(query);
+        });
+        renderList(filtered);
+    }
+
+    // モーダル操作
+    function openAddModal() {
+        document.getElementById('addModal').style.display = 'flex';
+    }
+    function closeAddModal() {
+        document.getElementById('addModal').style.display = 'none';
+        document.getElementById('newPsnid').value = '';
+        document.getElementById('newClan').value = '';
+        document.getElementById('newCrime').value = '';
+        document.getElementById('newNote').value = '';
+    }
+
+    // データ追加 (スプレッドシートへ送信)
+    async function submitTarget() {
+        const psnid = document.getElementById('newPsnid').value.trim();
+        if(!psnid) {
+            alert('PSNIDは必須です');
+            return;
+        }
+
+        const submitBtn = document.querySelector('.btn-submit');
+        submitBtn.innerText = '送信中...';
+        submitBtn.disabled = true;
+
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+
+        const newData = {
+            PSNID: psnid,
+            クラン: document.getElementById('newClan').value.trim(),
+            罪状: document.getElementById('newCrime').value.trim(),
+            備考: document.getElementById('newNote').value.trim(),
+            更新日: dateStr
+        };
+
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(newData)
+            });
+            
+            // 成功したらローカルのリストにも追加して再描画
+            targetData.unshift({
+                ...newData,
+                '所属クラン(当時)': newData.クラン
+            });
+            filterTargets();
+            closeAddModal();
+            alert('ターゲットをスプレッドシートに登録しました！');
+        } catch (error) {
+            alert('登録に失敗しました。');
+            console.error(error);
+        } finally {
+            submitBtn.innerText = '登録する';
+            submitBtn.disabled = false;
+        }
+    }
+
+    // 初回読み込み
+    window.onload = loadData;
+</script>
+
+</body>
+</html>
