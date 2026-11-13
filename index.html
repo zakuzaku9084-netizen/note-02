@@ -18,7 +18,6 @@
   <meta name="theme-color" content="#09090b">
   
   <script>
-    // PWA用のマニフェストを動的に生成して追加
     const manifest = {
       name: "DEATH NOTE - Blacklist DB",
       short_name: "DeathNote",
@@ -72,33 +71,15 @@
   </script>
   
   <style>
-    /* Custom Scrollbar & Mobile Optimizations */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: #09090b; }
     ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
     ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
-
-    /* iOS smooth scroll & tap highlight reset */
-    html, body {
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    
-    .card-glow:active, .card-glow:hover {
-      box-shadow: 0 0 15px rgba(220, 38, 38, 0.2);
-    }
-    .notebook-border {
-      border-left: 4px solid #dc2626;
-    }
-
-    /* Bottom sheet slide animation for mobile */
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-    .animate-slide-up {
-      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
+    html, body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .card-glow:active, .card-glow:hover { box-shadow: 0 0 15px rgba(220, 38, 38, 0.2); }
+    .notebook-border { border-left: 4px solid #dc2626; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .animate-slide-up { animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   </style>
 </head>
 <body class="bg-death-bg text-death-text font-sans antialiased min-h-screen selection:bg-red-900 selection:text-white pb-20 sm:pb-8">
@@ -107,16 +88,17 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // ★ ここでスプレッドシートのAPI URLを設定します ★
+    // ★ 現在設定されているAPI_URLです（変更不要） ★
     const API_URL = "https://script.google.com/macros/s/AKfycbxGxb8a_aAYBNxvLRYCSKj1hc-crI2ljyR2KDU7KaxFc-vw3qsFTkjG9vSdtJvWS1-d/exec";
 
-    // SVG アイコン
+    // SVG アイコン群
     const Icons = {
       Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
       Filter: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>,
       Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>,
       Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>,
       Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
+      Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
       Book: () => <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>,
       Table: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>,
       Grid: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>,
@@ -128,7 +110,6 @@
     };
 
     function App() {
-      // 状態管理
       const [players, setPlayers] = useState([]);
       const [isLoading, setIsLoading] = useState(true);
       const [searchTerm, setSearchTerm] = useState("");
@@ -139,12 +120,14 @@
       
       const [viewMode, setViewMode] = useState(() => window.innerWidth < 640 ? 'card' : 'table');
       const [selectedPlayer, setSelectedPlayer] = useState(null);
-      const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+      
+      // フォームモーダル状態 (nullなら閉じる。追加時は'add'、編集時はplayerオブジェクトが入る)
+      const [formTarget, setFormTarget] = useState(null);
+      
       const [copiedId, setCopiedId] = useState(null);
       const [toastMessage, setToastMessage] = useState("");
       const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-      // スプレッドシートからのデータ取得
       useEffect(() => {
         const loadData = async () => {
           try {
@@ -154,13 +137,11 @@
             const formattedData = data
               .filter(row => row.PSNID && String(row.PSNID).trim() !== "")
               .map((row, idx) => {
-                // 罪状を配列に分割
                 let crimesList = [];
                 if (row.罪状) {
                   crimesList = row.罪状.split(/[,、\s]+/).map(c => c.trim()).filter(c => c);
                 }
                 
-                // 危険度はスプレッドシートに無いためC（一般）をデフォルト、または備考から推測など
                 let dangerRank = "C";
                 if(row.備考 && row.備考.includes("終身名誉")) dangerRank = "S";
                 else if (row.備考 && row.備考.includes("FF")) dangerRank = "A";
@@ -189,7 +170,6 @@
         loadData();
       }, []);
 
-      // リサイズ検知でビュー自動最適化
       useEffect(() => {
         const handleResize = () => {
           if (window.innerWidth < 640 && viewMode === 'table') {
@@ -205,7 +185,6 @@
         setTimeout(() => setToastMessage(""), 3000);
       };
 
-      // クリップボード書き込み（スマホ・iFrame対応）
       const handleCopyPSNID = (psnid, e) => {
         if (e) e.stopPropagation();
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -235,7 +214,6 @@
         document.body.removeChild(textarea);
       };
 
-      // 集計
       const clansList = useMemo(() => {
         const set = new Set();
         players.forEach(p => { if (p.clan && p.clan !== "-") set.add(p.clan); });
@@ -248,7 +226,6 @@
         return Array.from(set);
       }, [players]);
 
-      // フィルタリング
       const filteredPlayers = useMemo(() => {
         return players.filter(player => {
           const term = searchTerm.toLowerCase();
@@ -275,38 +252,54 @@
         });
       }, [players, searchTerm, selectedClan, selectedCrimeTag, selectedDanger, sortBy]);
 
-      // スプレッドシートへのデータ追加
-      const handleAddPlayer = async (newPlayerData) => {
+      // スプレッドシートへのデータ送信 (追加 ＆ 編集)
+      const handleSavePlayer = async (newPlayerData, isEdit, originalPsnid) => {
         showToast("データベースへ送信中...");
         
         const today = new Date();
         const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
         
-        // GAS側が期待する形に変換
         const sheetData = {
           PSNID: newPlayerData.psnid,
           クラン: newPlayerData.clan,
-          罪状: newPlayerData.crimes.join('、'), // 配列をカンマ区切りに
+          罪状: newPlayerData.crimes.join('、'), 
           備考: newPlayerData.note,
           更新日: dateStr
+        };
+
+        const payload = isEdit ? {
+          action: 'edit',
+          targetPsnid: originalPsnid,
+          data: sheetData
+        } : {
+          action: 'add',
+          data: sheetData
         };
 
         try {
           await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(sheetData)
+            body: JSON.stringify(payload)
           });
 
           const newEntry = {
             ...newPlayerData,
-            id: Date.now().toString(),
+            id: isEdit ? newPlayerData.id : Date.now().toString(),
             date: dateStr
           };
           
-          setPlayers([newEntry, ...players]);
-          setIsAddModalOpen(false);
-          showToast(`ターゲット「${newEntry.psnid}」を保存しました`);
+          if (isEdit) {
+            setPlayers(players.map(p => p.psnid === originalPsnid ? newEntry : p));
+            if (selectedPlayer && selectedPlayer.psnid === originalPsnid) {
+              setSelectedPlayer(newEntry); // 詳細画面も更新
+            }
+            showToast(`ターゲット「${newEntry.psnid}」を更新しました`);
+          } else {
+            setPlayers([newEntry, ...players]);
+            showToast(`ターゲット「${newEntry.psnid}」を追加しました`);
+          }
+          setFormTarget(null);
         } catch (error) {
           console.error(error);
           showToast("保存に失敗しました。時間をおいて再試行してください。");
@@ -360,7 +353,6 @@
           <header className="border-b border-death-border bg-black/90 sticky top-0 z-30 shadow-xl backdrop-blur-md">
             <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
               <div className="flex items-center justify-between">
-                {/* Logo */}
                 <div 
                   className="flex items-center space-x-2.5 cursor-pointer" 
                   onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }}
@@ -378,10 +370,9 @@
                   </div>
                 </div>
 
-                {/* Desktop Buttons */}
                 <div className="hidden sm:flex items-center space-x-2">
                   <button
-                    onClick={() => setIsAddModalOpen(true)}
+                    onClick={() => setFormTarget('add')}
                     className="flex items-center gap-1.5 px-3.5 py-2 bg-red-700 hover:bg-red-600 text-white font-medium text-xs rounded border border-red-500 transition-all shadow-md"
                   >
                     <Icons.Plus />
@@ -399,9 +390,7 @@
             </div>
           </header>
 
-          {/* Main Area */}
           <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
-
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
               <div className="bg-death-panel p-2.5 sm:p-4 rounded-lg border border-death-border">
@@ -428,8 +417,6 @@
 
             {/* Control & Filter Panel */}
             <div className="bg-death-panel rounded-xl border border-death-border p-3 sm:p-4 mb-4 shadow-lg space-y-3">
-              
-              {/* Search Bar & View Mode Switch */}
               <div className="flex gap-2">
                 <div className="relative flex-grow">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
@@ -452,21 +439,17 @@
                   )}
                 </div>
 
-                {/* Mobile Filter Toggle Button */}
                 <button
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                   className={`sm:hidden p-2 rounded-lg border flex items-center justify-center transition-colors ${showMobileFilters || selectedClan !== 'ALL' || selectedDanger !== 'ALL' || selectedCrimeTag !== 'ALL' ? 'bg-red-950 text-red-400 border-red-700' : 'bg-zinc-950 text-zinc-400 border-zinc-800'}`}
-                  title="詳細フィルター"
                 >
                   <Icons.Filter />
                 </button>
 
-                {/* View Switcher */}
                 <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800 shrink-0">
                   <button
                     onClick={() => setViewMode('card')}
                     className={`px-2.5 py-1 rounded text-xs flex items-center gap-1 transition-colors ${viewMode === 'card' ? 'bg-red-900/60 text-white border border-red-700/50' : 'text-zinc-400'}`}
-                    title="カード表示"
                   >
                     <Icons.Grid />
                     <span className="hidden sm:inline">カード</span>
@@ -474,7 +457,6 @@
                   <button
                     onClick={() => setViewMode('table')}
                     className={`px-2.5 py-1 rounded text-xs flex items-center gap-1 transition-colors ${viewMode === 'table' ? 'bg-red-900/60 text-white border border-red-700/50' : 'text-zinc-400'}`}
-                    title="テーブル表示"
                   >
                     <Icons.Table />
                     <span className="hidden sm:inline">リスト</span>
@@ -482,7 +464,6 @@
                 </div>
               </div>
 
-              {/* Filters (Always visible on Desktop, collapsible on Mobile) */}
               <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-zinc-800/60 ${showMobileFilters ? 'block' : 'hidden sm:grid'}`}>
                 <div>
                   <label className="block text-[11px] text-zinc-400 mb-1">所属クラン</label>
@@ -495,7 +476,6 @@
                     {clansList.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-[11px] text-zinc-400 mb-1">危険度ランク</label>
                   <select
@@ -510,7 +490,6 @@
                     <option value="C">C級 (一般)</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-[11px] text-zinc-400 mb-1">ソート順</label>
                   <select
@@ -526,7 +505,6 @@
                 </div>
               </div>
 
-              {/* Crime Tag Quick Filters */}
               {allCrimeTags.length > 0 && (
                 <div className={`pt-2 ${showMobileFilters ? 'block' : 'hidden sm:block'}`}>
                   <div className="text-[11px] text-zinc-400 mb-1.5 flex items-center justify-between">
@@ -558,7 +536,6 @@
               )}
             </div>
 
-            {/* Results Header */}
             <div className="flex items-center justify-between mb-3 px-1 text-xs text-zinc-400">
               <span>検索結果: <strong className="text-white">{filteredPlayers.length}</strong> 件</span>
               {(searchTerm || selectedClan !== 'ALL' || selectedCrimeTag !== 'ALL' || selectedDanger !== 'ALL') && (
@@ -571,7 +548,6 @@
               )}
             </div>
 
-            {/* Content View: Card vs Table */}
             {filteredPlayers.length === 0 ? (
               <div className="bg-death-panel rounded-xl border border-death-border p-8 text-center my-6">
                 <div className="w-12 h-12 mx-auto mb-3 text-zinc-600 flex items-center justify-center rounded-full bg-zinc-900 border border-zinc-800">
@@ -579,15 +555,8 @@
                 </div>
                 <h3 className="text-sm font-bold text-zinc-300">条件に一致するターゲットが見つかりません</h3>
                 <p className="text-xs text-zinc-500 mt-1 mb-4">キーワードを変えるかフィルターを解除してください。</p>
-                <button
-                  onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }}
-                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs rounded border border-zinc-700"
-                >
-                  すべての検索条件をリセット
-                </button>
               </div>
             ) : viewMode === 'card' ? (
-              /* CARD VIEW (Optimized for Mobile Touch) */
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredPlayers.map((player) => (
                   <div
@@ -596,20 +565,12 @@
                     className="bg-death-panel rounded-xl border border-death-border p-3.5 hover:border-red-800/70 cursor-pointer active:scale-[0.99] transition-all card-glow flex flex-col justify-between"
                   >
                     <div>
-                      {/* Top Header inside Card */}
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div>
                           <div className="flex items-center space-x-1.5">
                             <span className="font-mono text-sm sm:text-base font-bold text-white tracking-wide">
                               {player.psnid}
                             </span>
-                            <button
-                              onClick={(e) => handleCopyPSNID(player.psnid, e)}
-                              className="p-1.5 text-zinc-400 hover:text-white rounded active:bg-zinc-800"
-                              title="IDコピー"
-                            >
-                              {copiedId === player.psnid ? <Icons.Check /> : <Icons.Copy />}
-                            </button>
                           </div>
                           {player.clan && player.clan !== "-" && (
                             <span className="text-[11px] text-zinc-400">
@@ -620,25 +581,19 @@
                         <div>{renderDangerBadge(player.danger)}</div>
                       </div>
 
-                      {/* Crimes Badges */}
                       <div className="flex flex-wrap gap-1 my-2.5">
                         {player.crimes && player.crimes.map((crime, i) => (
-                          <span
-                            key={i}
-                            className="px-2 py-0.5 rounded bg-red-950/70 text-red-300 border border-red-900/80 text-[11px]"
-                          >
+                          <span key={i} className="px-2 py-0.5 rounded bg-red-950/70 text-red-300 border border-red-900/80 text-[11px]">
                             #{crime}
                           </span>
                         ))}
                       </div>
 
-                      {/* Note snippet */}
                       <p className="text-xs text-zinc-400 line-clamp-2 bg-zinc-950/80 p-2 rounded border border-zinc-900/80 mb-2">
                         {player.note || "備考なし"}
                       </p>
                     </div>
 
-                    {/* Bottom Metadata */}
                     <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-2 border-t border-zinc-800/60 font-mono">
                       <span>{player.date}</span>
                       <span className="text-red-400 font-sans">タップして詳細 →</span>
@@ -647,7 +602,6 @@
                 ))}
               </div>
             ) : (
-              /* TABLE VIEW (Horizontal Scroll friendly) */
               <div className="bg-death-panel rounded-xl border border-death-border shadow-xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs sm:text-sm">
@@ -670,21 +624,11 @@
                           className="hover:bg-zinc-800/40 cursor-pointer active:bg-zinc-800/60 transition-colors"
                         >
                           <td className="py-3 px-3 font-mono font-medium text-white whitespace-nowrap">
-                            <div className="flex items-center space-x-1.5">
-                              <span>{player.psnid}</span>
-                              <button
-                                onClick={(e) => handleCopyPSNID(player.psnid, e)}
-                                className="p-1 text-zinc-400 hover:text-white"
-                              >
-                                {copiedId === player.psnid ? <Icons.Check /> : <Icons.Copy />}
-                              </button>
-                            </div>
+                            {player.psnid}
                           </td>
                           <td className="py-3 px-2 whitespace-nowrap text-zinc-300">
                             {player.clan && player.clan !== "-" ? (
-                              <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[11px] border border-zinc-700">
-                                {player.clan}
-                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[11px] border border-zinc-700">{player.clan}</span>
                             ) : "-"}
                           </td>
                           <td className="py-3 px-2 whitespace-nowrap">
@@ -693,9 +637,7 @@
                           <td className="py-3 px-2">
                             <div className="flex flex-wrap gap-1 max-w-[140px] sm:max-w-none">
                               {player.crimes && player.crimes.map((c, i) => (
-                                <span key={i} className="px-1.5 py-0.5 rounded bg-red-950/60 text-red-300 text-[10px]">
-                                  {c}
-                                </span>
+                                <span key={i} className="px-1.5 py-0.5 rounded bg-red-950/60 text-red-300 text-[10px]">{c}</span>
                               ))}
                             </div>
                           </td>
@@ -705,7 +647,13 @@
                           <td className="py-3 px-2 text-zinc-500 text-[11px] whitespace-nowrap font-mono">
                             {player.date}
                           </td>
-                          <td className="py-3 px-2 text-right whitespace-nowrap">
+                          <td className="py-3 px-2 text-right whitespace-nowrap space-x-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setFormTarget(player); }}
+                              className="px-2 py-1 bg-red-900/60 text-red-300 rounded text-xs border border-red-800 hover:bg-red-800"
+                            >
+                              編集
+                            </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); }}
                               className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-xs border border-zinc-700"
@@ -722,10 +670,9 @@
             )}
           </main>
 
-          {/* MOBILE FIXED BOTTOM ACTION BAR */}
           <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-black/95 border-t border-death-border px-4 py-2.5 flex items-center justify-around backdrop-blur-md">
             <button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => setFormTarget('add')}
               className="flex-1 mr-2 py-2 bg-red-700 active:bg-red-600 text-white font-semibold text-xs rounded border border-red-500 flex items-center justify-center gap-1 shadow-lg"
             >
               <Icons.Plus />
@@ -734,26 +681,23 @@
             <button
               onClick={handleExportCSV}
               className="p-2.5 bg-zinc-800 text-zinc-300 rounded border border-zinc-700"
-              title="CSV出力"
             >
               <Icons.Download />
             </button>
           </div>
 
-          {/* PLAYER DETAIL MODAL (Mobile Bottom Sheet / Desktop Center Modal) */}
+          {/* PLAYER DETAIL MODAL */}
           {selectedPlayer && (
             <div 
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+              className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
               onClick={() => setSelectedPlayer(null)}
             >
               <div 
                 className="bg-death-panel border-t sm:border border-red-900/60 rounded-t-2xl sm:rounded-xl max-w-xl w-full p-5 shadow-2xl overflow-y-auto max-h-[85vh] sm:max-h-none animate-slide-up sm:animate-none notebook-border"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Drag Indicator for mobile */}
                 <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-4 sm:hidden"></div>
 
-                {/* Modal Header */}
                 <div className="flex items-start justify-between pb-3 border-b border-zinc-800">
                   <div>
                     <div className="flex items-center space-x-2">
@@ -765,43 +709,31 @@
                         className="px-2 py-1 text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded border border-zinc-700 flex items-center gap-1"
                       >
                         {copiedId === selectedPlayer.psnid ? <Icons.Check /> : <Icons.Copy />}
-                        <span>IDコピー</span>
+                        <span>コピー</span>
                       </button>
                     </div>
                     <p className="text-xs text-zinc-400 mt-1">
                       所属組織: <span className="text-zinc-200 font-semibold">{selectedPlayer.clan || "-"}</span>
                     </p>
                   </div>
-                  <button
-                    onClick={() => setSelectedPlayer(null)}
-                    className="text-zinc-400 hover:text-white p-1 rounded bg-zinc-800/50"
-                  >
+                  <button onClick={() => setSelectedPlayer(null)} className="text-zinc-400 hover:text-white p-1 rounded bg-zinc-800/50">
                     <Icons.Close />
                   </button>
                 </div>
 
-                {/* Modal Body */}
                 <div className="py-4 space-y-3.5">
                   <div className="flex items-center justify-between bg-zinc-950 p-3 rounded-lg border border-zinc-800">
                     <div>
                       <span className="text-[10px] text-zinc-500 block">判定危険度ランク</span>
                       <div className="mt-1">{renderDangerBadge(selectedPlayer.danger)}</div>
                     </div>
-                    {selectedPlayer.platform && (
-                      <div className="text-right">
-                        <span className="text-[10px] text-zinc-500 block">プラットフォーム</span>
-                        <span className="text-xs font-mono font-semibold text-zinc-300">{selectedPlayer.platform}</span>
-                      </div>
-                    )}
                   </div>
 
                   <div>
                     <span className="text-xs font-semibold text-zinc-400 block mb-1">認定罪状タグ</span>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedPlayer.crimes && selectedPlayer.crimes.map((c, idx) => (
-                        <span key={idx} className="px-2.5 py-1 rounded bg-red-950 text-red-300 border border-red-800 text-xs font-semibold">
-                          #{c}
-                        </span>
+                        <span key={idx} className="px-2.5 py-1 rounded bg-red-950 text-red-300 border border-red-800 text-xs font-semibold">#{c}</span>
                       ))}
                     </div>
                   </div>
@@ -818,8 +750,13 @@
                   </div>
                 </div>
 
-                {/* Modal Footer */}
-                <div className="pt-3 border-t border-zinc-800 flex justify-end">
+                <div className="pt-3 border-t border-zinc-800 flex justify-end gap-2">
+                  <button
+                    onClick={() => { setFormTarget(selectedPlayer); }}
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-red-900 hover:bg-red-800 text-white text-xs font-medium rounded border border-red-700 flex justify-center items-center gap-1"
+                  >
+                    <Icons.Edit /> 編集する
+                  </button>
                   <button
                     onClick={() => setSelectedPlayer(null)}
                     className="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-medium rounded border border-zinc-700"
@@ -831,11 +768,12 @@
             </div>
           )}
 
-          {/* ADD TARGET MODAL */}
-          {isAddModalOpen && (
-            <AddPlayerModal
-              onClose={() => setIsAddModalOpen(false)}
-              onAdd={handleAddPlayer}
+          {/* FORM MODAL (Add & Edit) */}
+          {formTarget !== null && (
+            <PlayerFormModal
+              targetData={formTarget}
+              onClose={() => setFormTarget(null)}
+              onSave={handleSavePlayer}
             />
           )}
 
@@ -850,14 +788,16 @@
       );
     }
 
-    // Modal for adding player
-    function AddPlayerModal({ onClose, onAdd }) {
-      const [psnid, setPsnid] = useState('');
-      const [clan, setClan] = useState('');
-      const [crimesInput, setCrimesInput] = useState('');
-      const [note, setNote] = useState('');
-      const [danger, setDanger] = useState('B');
-      const [platform, setPlatform] = useState('PS5');
+    // Modal for adding or editing player
+    function PlayerFormModal({ targetData, onClose, onSave }) {
+      const isEdit = targetData !== 'add';
+      const initialData = isEdit ? targetData : null;
+
+      const [psnid, setPsnid] = useState(initialData ? initialData.psnid : '');
+      const [clan, setClan] = useState(initialData ? (initialData.clan === '-' ? '' : initialData.clan) : '');
+      const [crimesInput, setCrimesInput] = useState(initialData ? (initialData.crimes || []).join(', ') : '');
+      const [note, setNote] = useState(initialData ? (initialData.note === '-' ? '' : initialData.note) : '');
+      const [danger, setDanger] = useState(initialData ? initialData.danger : 'B');
 
       const handleSubmit = (e) => {
         e.preventDefault();
@@ -868,14 +808,16 @@
           .map(c => c.trim())
           .filter(c => c.length > 0);
 
-        onAdd({
+        const updatedData = {
+          ...(initialData || {}),
           psnid: psnid.trim(),
           clan: clan.trim() || "-",
           crimes: crimesList.length > 0 ? crimesList : ["要確認"],
           note: note.trim(),
-          danger,
-          platform
-        });
+          danger
+        };
+
+        onSave(updatedData, isEdit, isEdit ? initialData.psnid : null);
       };
 
       return (
@@ -891,7 +833,8 @@
             
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 font-cinzel">
-                <Icons.Skull /> ターゲット追加
+                {isEdit ? <Icons.Edit /> : <Icons.Skull />} 
+                {isEdit ? 'ターゲット情報編集' : 'ターゲット追加'}
               </h3>
               <button onClick={onClose} className="text-zinc-400 hover:text-white p-1">
                 <Icons.Close />
@@ -971,9 +914,10 @@
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-red-700 hover:bg-red-600 text-white font-medium text-xs rounded border border-red-500"
+                  className="px-5 py-2 bg-red-700 hover:bg-red-600 text-white font-medium text-xs rounded border border-red-500 flex items-center gap-1"
                 >
-                  ノートへ保存
+                  {isEdit ? <Icons.Edit /> : <Icons.Plus />}
+                  {isEdit ? '上書き保存' : 'ノートへ保存'}
                 </button>
               </div>
             </form>
