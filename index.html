@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>DEATH NOTE - Blacklist Database</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Inter & Noto Serif JP & Cinzel -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Inter:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@600;900&display=swap" rel="stylesheet">
@@ -152,7 +150,7 @@
               lag: formatList(data.lag || [], "B", "ラグ対面"),
               au: formatList(data.au || [], "A", "-AU"),
               vs4: formatList(data.vs4 || [], "B", "Vs4"),
-              umao: formatList(data.umao || [], "B", "うまお")
+              umao: formatList(data.umao || [], "B", "ウマオ") // ★ カタカナに修正
             });
           } catch (error) {
             console.error("Fetch error:", error);
@@ -256,7 +254,6 @@
         });
       }, [players, searchTerm, selectedClan, selectedCrimeTag, selectedDanger, sortBy]);
 
-      // スプレッドシートへのデータ送信 (本編のみ)
       const handleSavePlayer = async (newPlayerData, isEdit, originalPsnid) => {
         showToast("データベースへ送信中...");
         
@@ -376,7 +373,7 @@
 
           <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
             
-            {/* ★ 5つのタブ切り替えメニュー ★ */}
+            {/* ★ タブ切り替えメニュー（ウマオ表記に変更） ★ */}
             <div className="flex space-x-1.5 sm:space-x-2 bg-zinc-950/50 p-1.5 rounded-xl border border-zinc-800/80 mb-5 overflow-x-auto hide-scrollbar">
               <button 
                 onClick={() => setActiveTab('main')} 
@@ -406,7 +403,7 @@
                 onClick={() => setActiveTab('umao')} 
                 className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'umao' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
               >
-                うまお ({playersData.umao.length})
+                ウマオ ({playersData.umao.length})
               </button>
             </div>
 
