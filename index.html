@@ -71,13 +71,13 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // ★ 新しく発行していただいたURLをセットしました ★
-    const API_URL = "https://script.google.com/macros/s/AKfycbwKo3-ODlst7z60YPgCnJ60ynnV6bUOptEW9bzdpU1t_LLI2Wk_ORCrTkXqLXGco7V3/exec";
+    // ★ ここに新しく発行したURLを設定しました ★
+    const API_URL = "https://script.google.com/macros/s/AKfycbwfYAGXfjWtTQAqEzj8ODrv8xILFUJdkyLX4krAIcuy98y0cUbj5j2M4QIUp_fzrL3W/exec";
 
     const Icons = {
       Search: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
       Filter: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>,
-      Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>,
+      Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>,
       Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>,
       Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
       Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
@@ -93,9 +93,8 @@
     };
 
     function App() {
-      // 3つのリストデータのみ保持 (本編、ラグ対面、-AU)
       const [playersData, setPlayersData] = useState({ main: [], lag: [], au: [] });
-      const [activeTab, setActiveTab] = useState('main'); // 'main' | 'lag' | 'au'
+      const [activeTab, setActiveTab] = useState('main');
       const [isLoading, setIsLoading] = useState(true);
 
       const [searchTerm, setSearchTerm] = useState("");
@@ -117,7 +116,6 @@
       const loadData = async () => {
         setIsLoading(true);
         try {
-          // キャッシュ回避のため、URLの後ろに現在の時刻（?t=数字）をくっつけて毎回最新を取得
           const response = await fetch(`${API_URL}?t=${Date.now()}`);
           const data = await response.json();
           
@@ -277,9 +275,13 @@
           let result = {};
           try { result = await response.json(); } catch(e) {}
           
-          // ★ 古いシステムに繋がっている場合の警告
+          if (result.status === 'error') {
+             alert("システムエラーが発生しました:\n" + result.message);
+             return;
+          }
+
           if (result.status === 'success' && result.action_performed === undefined) {
-             alert("【警告】\nアプリに設定されているURLが古いままです！\nスプレッドシート側で「新しいデプロイ」をして、取得した新しいURLをHTMLに貼り直してください。");
+             alert("【警告】\nアプリに設定されているURLが古いままです！\nスプレッドシート側で「新しいデプロイ」をして、新しいURLをHTMLに貼り直してください。");
              return;
           }
 
@@ -292,7 +294,6 @@
         }
       };
 
-      // ★ 削除機能
       const handleDeletePlayer = async (targetPsnid) => {
         if (!window.confirm(`本当に「${targetPsnid}」をデータベースから削除しますか？\nこの操作は元に戻せません。`)) {
           return;
@@ -310,13 +311,16 @@
           let result = {};
           try { result = await response.json(); } catch(e) {}
 
-          // ★ 古いシステムに繋がっている場合の警告
+          if (result.status === 'error') {
+             alert("システムエラーにより削除できませんでした:\n" + result.message);
+             return;
+          }
+
           if (result.status === 'success' && result.action_performed !== 'delete') {
              alert("【警告】\n削除機能がない古いシステムに繋がっています！\nスプレッドシート側で「新しいデプロイ」を行って新しいURLを取得し、HTMLに貼り直してください。");
              return;
           }
 
-          // 削除成功後、最新状態をスプレッドシートから引っ張ってくる
           await loadData();
           setSelectedPlayer(null);
           showToast(`ターゲット「${targetPsnid}」を完全に削除しました`);
@@ -363,7 +367,6 @@
 
       return (
         <div className="min-h-screen flex flex-col">
-          {/* Header */}
           <header className="border-b border-death-border bg-black/90 sticky top-0 z-30 shadow-xl backdrop-blur-md">
             <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
               <div className="flex items-center justify-between">
@@ -532,8 +535,11 @@
             <div className="flex items-center justify-between mb-3 px-1 text-xs text-zinc-400">
               <span>検索結果: <strong className="text-white">{filteredPlayers.length}</strong> 件</span>
               <div className="flex items-center gap-2">
+                <button onClick={loadData} className="text-zinc-400 hover:text-white flex items-center gap-1">
+                  <Icons.Reset /> 更新
+                </button>
                 {(searchTerm || selectedClan !== 'ALL' || selectedCrimeTag !== 'ALL' || selectedDanger !== 'ALL') && (
-                  <button onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }} className="text-red-400 hover:text-red-300 flex items-center gap-1 ml-2 pl-2">
+                  <button onClick={() => { setSearchTerm(''); setSelectedClan('ALL'); setSelectedCrimeTag('ALL'); setSelectedDanger('ALL'); }} className="text-red-400 hover:text-red-300 flex items-center gap-1 ml-2 border-l border-zinc-700 pl-2">
                     <Icons.Close /> 検索解除
                   </button>
                 )}
