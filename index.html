@@ -92,8 +92,9 @@
     };
 
     function App() {
-      const [playersData, setPlayersData] = useState({ main: [], lag: [], au: [], vs4: [], umao: [] });
-      const [activeTab, setActiveTab] = useState('main'); 
+      // 3つのリストデータのみ保持
+      const [playersData, setPlayersData] = useState({ main: [], lag: [], au: [] });
+      const [activeTab, setActiveTab] = useState('main'); // 'main' | 'lag' | 'au'
       const [isLoading, setIsLoading] = useState(true);
 
       const [searchTerm, setSearchTerm] = useState("");
@@ -147,9 +148,7 @@
             setPlayersData({
               main: formatList(data.main || [], "C"),
               lag: formatList(data.lag || [], "B", "ラグ対面"),
-              au: formatList(data.au || [], "A", "-AU"),
-              vs4: formatList(data.vs4 || [], "B", "Vs4"),
-              umao: formatList(data.umao || [], "B", "ウマオ")
+              au: formatList(data.au || [], "A", "-AU")
             });
           } catch (error) {
             console.error("Fetch error:", error);
@@ -399,6 +398,7 @@
 
           <main className="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
             
+            {/* ★ 3つのタブ切り替えメニュー ★ */}
             <div className="flex space-x-1.5 sm:space-x-2 bg-zinc-950/50 p-1.5 rounded-xl border border-zinc-800/80 mb-5 overflow-x-auto hide-scrollbar">
               <button 
                 onClick={() => setActiveTab('main')} 
@@ -417,18 +417,6 @@
                 className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'au' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
               >
                 -AU ({playersData.au.length})
-              </button>
-              <button 
-                onClick={() => setActiveTab('vs4')} 
-                className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'vs4' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
-              >
-                Vs4 ({playersData.vs4.length})
-              </button>
-              <button 
-                onClick={() => setActiveTab('umao')} 
-                className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap transition-all duration-200 ${activeTab === 'umao' ? 'bg-gradient-to-t from-red-950 to-red-900 text-white shadow-md border border-red-700/50' : 'text-zinc-400 hover:bg-zinc-800/50 border border-transparent'}`}
-              >
-                ウマオ ({playersData.umao.length})
               </button>
             </div>
 
